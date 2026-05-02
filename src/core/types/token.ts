@@ -1,3 +1,5 @@
+import type { SourceSpan } from "./source";
+
 export type TokenType =
   | "mnemonic"
   | "register"
@@ -6,17 +8,6 @@ export type TokenType =
   | "comma"
   | "colon"
   | "eof";
-
-export interface SourcePosition {
-  offset: number;
-  line: number;
-  column: number;
-}
-
-export interface SourceSpan {
-  start: SourcePosition;
-  end: SourcePosition;
-}
 
 export interface Token {
   type: TokenType;

@@ -1,5 +1,5 @@
 import { MNEMONICS, REGISTERS } from "@core/constants";
-import type { SourcePosition, Token, TokenType } from "./types";
+import type { SourcePosition, Token, TokenType } from "@core/types";
 
 export class Tokenizer {
   private cursor = 0;
