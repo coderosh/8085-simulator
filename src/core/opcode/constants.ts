@@ -1,30 +1,87 @@
-export const MOV_BASE_CODE = 0x40;
-export const IMMEDIATE_MOV_BASE_CODE = 0x06;
-export const LXI_BASE_CODE = 0x01;
-export const LDA_OP_CODE = 0x3a;
-export const LDAX_BASE_CODE = 0x0a;
-export const LHLD_OP_CODE = 0x2a;
-export const STA_OP_CODE = 0x32;
-export const STAX_BASE_CODE = 0x02;
-export const SHLD_OP_CODE = 0x22;
-export const XCHG_OP_CODE = 0xeb;
-export const NOP_OP_CODE = 0x00;
-export const ADD_BASE_CODE = 0x80;
-export const ADC_BASE_CODE = 0x88;
-export const SUB_BASE_CODE = 0x90;
-export const SBB_BASE_CODE = 0x98;
-export const ACI_OP_CODE = 0xce;
-export const ADI_OP_CODE = 0xc6;
-export const DAD_BASE_CODE = 0x09;
-export const SUI_OP_CODE = 0xd6;
-export const SBI_OP_CODE = 0xde;
-export const INR_BASE_CODE = 0x04;
-export const INX_BASE_CODE = 0x03;
-export const DCR_BASE_CODE = 0x05;
-export const DCX_BASE_CODE = 0x0b;
-export const DAA_OP_CODE = 0x27;
-export const ANA_BASE_CODE = 0xa0;
-export const ANI_OP_CODE = 0xe6;
+export const BASE_CODE = {
+  MOV: 0x40,
+  MVI: 0x06,
+  LXI: 0x01,
+  LDAX: 0x0a,
+  STAX: 0x02,
+  INX: 0x03,
+  DCX: 0x0b,
+  DAD: 0x09,
+  PUSH: 0xc5,
+  POP: 0xc1,
+  RST: 0xc7,
+  ADD: 0x80,
+  ADC: 0x88,
+  SUB: 0x90,
+  SBB: 0x98,
+  INR: 0x04,
+  DCR: 0x05,
+  ANA: 0xa0,
+  ORA: 0xb0,
+  XRA: 0xa8,
+  CMP: 0xb8,
+};
+
+export const OP_CODE = {
+  LDA: 0x3a,
+  LHLD: 0x2a,
+  STA: 0x32,
+  SHLD: 0x22,
+  XCHG: 0xeb,
+  NOP: 0x00,
+  ACI: 0xce,
+  ADI: 0xc6,
+  SUI: 0xd6,
+  SBI: 0xde,
+  DAA: 0x27,
+  ANI: 0xe6,
+  XRI: 0xee,
+  CMA: 0x2f,
+  CMC: 0x3f,
+  STC: 0x37,
+  CPI: 0xfe,
+  RLC: 0x07,
+  RRC: 0x0f,
+  RAL: 0x17,
+  RAR: 0x1f,
+  JMP: 0xc3,
+  JC: 0xda,
+  JNC: 0xd2,
+  JZ: 0xca,
+  JNZ: 0xc2,
+  JM: 0xfa,
+  JP: 0xf2,
+  JPE: 0xea,
+  JPO: 0xe2,
+  CALL: 0xcd,
+  CC: 0xdc,
+  CNC: 0xd4,
+  CZ: 0xcc,
+  CNZ: 0xc4,
+  CM: 0xfc,
+  CP: 0xf4,
+  CPE: 0xec,
+  CPO: 0xe4,
+  RET: 0xc9,
+  RC: 0xd8,
+  RNC: 0xd0,
+  RZ: 0xc8,
+  RNZ: 0xc0,
+  RM: 0xf8,
+  RP: 0xf0,
+  RPE: 0xe8,
+  RPO: 0xe0,
+  PCHL: 0xe9,
+  XTHL: 0xe3,
+  SPHL: 0xf9,
+  IN: 0xdb,
+  OUT: 0xd3,
+  EI: 0xfb,
+  DI: 0xf3,
+  HLT: 0x76,
+  RIM: 0x20,
+  SIM: 0x30,
+};
 
 export const REGISTER_CODES: Record<string, number> = {
   B: 0,
@@ -42,4 +99,11 @@ export const REGISTER_PAIR_CODES: Record<string, number> = {
   D: 1, // DE pair
   H: 2, // HL pair
   SP: 3, // Stack Pointer
+};
+
+export const STACK_REGISTER_PAIR_CODES: Record<string, number> = {
+  B: 0,
+  D: 1,
+  H: 2,
+  PSW: 3,
 };

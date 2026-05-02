@@ -1,35 +1,11 @@
 // ref: http://www.eazynotes.com/notes/microprocessor/notes/opcodes-table-of-intel-8085.pdf
 
 import {
-  ACI_OP_CODE,
-  ADC_BASE_CODE,
-  ADD_BASE_CODE,
-  ADI_OP_CODE,
-  ANA_BASE_CODE,
-  ANI_OP_CODE,
-  DAA_OP_CODE,
-  DAD_BASE_CODE,
-  DCR_BASE_CODE,
-  DCX_BASE_CODE,
-  IMMEDIATE_MOV_BASE_CODE,
-  INR_BASE_CODE,
-  INX_BASE_CODE,
-  LDA_OP_CODE,
-  LDAX_BASE_CODE,
-  LHLD_OP_CODE,
-  LXI_BASE_CODE,
-  MOV_BASE_CODE,
-  NOP_OP_CODE,
+  BASE_CODE,
+  OP_CODE,
   REGISTER_CODES,
   REGISTER_PAIR_CODES,
-  SBB_BASE_CODE,
-  SBI_OP_CODE,
-  SHLD_OP_CODE,
-  STA_OP_CODE,
-  STAX_BASE_CODE,
-  SUB_BASE_CODE,
-  SUI_OP_CODE,
-  XCHG_OP_CODE,
+  STACK_REGISTER_PAIR_CODES,
 } from "./constants";
 
 export class OpCodeEncoder {
@@ -50,7 +26,7 @@ export class OpCodeEncoder {
      * DEST:     xxx 000 -- need to shift left by 3
      * SRC:      000 xxx
      */
-    return MOV_BASE_CODE | (destCode << 3) | srcCode;
+    return BASE_CODE.MOV | (destCode << 3) | srcCode;
   }
 
   mvi(dest: string, val: number): number[] {
@@ -58,7 +34,7 @@ export class OpCodeEncoder {
 
     const destCode = REGISTER_CODES[dest];
 
-    return [IMMEDIATE_MOV_BASE_CODE | (destCode << 3), this.lowerByte(val)];
+    return [BASE_CODE.MVI | (destCode << 3), this.lowerByte(val)];
   }
 
   lxi(dest: string, val: number): number[] {
@@ -74,7 +50,7 @@ export class OpCodeEncoder {
      * HIGH:     xxxxxxxx  (high byte of immediate)
      */
     return [
-      LXI_BASE_CODE | (destCode << 4),
+      BASE_CODE.LXI | (destCode << 4),
       this.lowerByte(val),
       this.higherByte(val),
     ];
@@ -83,7 +59,7 @@ export class OpCodeEncoder {
   lda(addr: number): number[] {
     this.validateAddress(addr);
 
-    return [LDA_OP_CODE, this.lowerByte(addr), this.higherByte(addr)];
+    return [OP_CODE.LDA, this.lowerByte(addr), this.higherByte(addr)];
   }
 
   ldax(src: string): number {
@@ -91,19 +67,19 @@ export class OpCodeEncoder {
 
     const srcCode = REGISTER_PAIR_CODES[src];
 
-    return LDAX_BASE_CODE | (srcCode << 4);
+    return BASE_CODE.LDAX | (srcCode << 4);
   }
 
   lhld(addr: number): number[] {
     this.validateAddress(addr);
 
-    return [LHLD_OP_CODE, this.lowerByte(addr), this.higherByte(addr)];
+    return [OP_CODE.LHLD, this.lowerByte(addr), this.higherByte(addr)];
   }
 
   sta(addr: number): number[] {
     this.validateAddress(addr);
 
-    return [STA_OP_CODE, this.lowerByte(addr), this.higherByte(addr)];
+    return [OP_CODE.STA, this.lowerByte(addr), this.higherByte(addr)];
   }
 
   stax(src: string): number {
@@ -111,17 +87,17 @@ export class OpCodeEncoder {
 
     const srcCode = REGISTER_PAIR_CODES[src];
 
-    return STAX_BASE_CODE | (srcCode << 4);
+    return BASE_CODE.STAX | (srcCode << 4);
   }
 
   shld(addr: number): number[] {
     this.validateAddress(addr);
 
-    return [SHLD_OP_CODE, this.lowerByte(addr), this.higherByte(addr)];
+    return [OP_CODE.SHLD, this.lowerByte(addr), this.higherByte(addr)];
   }
 
   xchg(): number {
-    return XCHG_OP_CODE;
+    return OP_CODE.XCHG;
   }
 
   // ARITHMETIC
@@ -131,7 +107,7 @@ export class OpCodeEncoder {
 
     const srcCode = REGISTER_CODES[src];
 
-    return ADD_BASE_CODE | srcCode;
+    return BASE_CODE.ADD | srcCode;
   }
 
   adc(src: string): number {
@@ -139,7 +115,7 @@ export class OpCodeEncoder {
 
     const srcCode = REGISTER_CODES[src];
 
-    return ADC_BASE_CODE | srcCode;
+    return BASE_CODE.ADC | srcCode;
   }
 
   sub(src: string): number {
@@ -147,7 +123,7 @@ export class OpCodeEncoder {
 
     const srcCode = REGISTER_CODES[src];
 
-    return SUB_BASE_CODE | srcCode;
+    return BASE_CODE.SUB | srcCode;
   }
 
   sbb(src: string): number {
@@ -155,15 +131,15 @@ export class OpCodeEncoder {
 
     const srcCode = REGISTER_CODES[src];
 
-    return SBB_BASE_CODE | srcCode;
+    return BASE_CODE.SBB | srcCode;
   }
 
   aci(src: number): number[] {
-    return [ACI_OP_CODE, this.lowerByte(src)];
+    return [OP_CODE.ACI, this.lowerByte(src)];
   }
 
   adi(src: number): number[] {
-    return [ADI_OP_CODE, this.lowerByte(src)];
+    return [OP_CODE.ADI, this.lowerByte(src)];
   }
 
   dad(src: string): number {
@@ -171,15 +147,15 @@ export class OpCodeEncoder {
 
     const srcCode = REGISTER_PAIR_CODES[src];
 
-    return DAD_BASE_CODE | (srcCode << 4);
+    return BASE_CODE.DAD | (srcCode << 4);
   }
 
   sui(val: number): number[] {
-    return [SUI_OP_CODE, this.lowerByte(val)];
+    return [OP_CODE.SUI, this.lowerByte(val)];
   }
 
   sbi(val: number): number[] {
-    return [SBI_OP_CODE, this.lowerByte(val)];
+    return [OP_CODE.SBI, this.lowerByte(val)];
   }
 
   inr(dest: string): number {
@@ -187,7 +163,7 @@ export class OpCodeEncoder {
 
     const destCode = REGISTER_CODES[dest];
 
-    return INR_BASE_CODE | (destCode << 3);
+    return BASE_CODE.INR | (destCode << 3);
   }
 
   inx(dest: string): number {
@@ -195,7 +171,7 @@ export class OpCodeEncoder {
 
     const destCode = REGISTER_PAIR_CODES[dest];
 
-    return INX_BASE_CODE | (destCode << 4);
+    return BASE_CODE.INX | (destCode << 4);
   }
 
   dcr(dest: string): number {
@@ -203,7 +179,7 @@ export class OpCodeEncoder {
 
     const destCode = REGISTER_CODES[dest];
 
-    return DCR_BASE_CODE | (destCode << 3);
+    return BASE_CODE.DCR | (destCode << 3);
   }
 
   dcx(dest: string): number {
@@ -211,11 +187,11 @@ export class OpCodeEncoder {
 
     const destCode = REGISTER_PAIR_CODES[dest];
 
-    return DCX_BASE_CODE | (destCode << 4);
+    return BASE_CODE.DCX | (destCode << 4);
   }
 
   daa(): number {
-    return DAA_OP_CODE;
+    return OP_CODE.DAA;
   }
 
   // LOGICAL
@@ -225,125 +201,289 @@ export class OpCodeEncoder {
 
     const srcCode = REGISTER_CODES[src];
 
-    return ANA_BASE_CODE | srcCode;
+    return BASE_CODE.ANA | srcCode;
   }
 
   ani(src: number): number[] {
-    return [ANI_OP_CODE, this.lowerByte(src)];
+    return [OP_CODE.ANI, this.lowerByte(src)];
   }
 
-  ora() {}
+  ora(src: string): number {
+    this.validateRegister(src);
 
-  xra() {}
+    const srcCode = REGISTER_CODES[src];
 
-  xri() {}
+    return BASE_CODE.ORA | srcCode;
+  }
 
-  cma() {}
+  xra(src: string): number {
+    this.validateRegister(src);
 
-  cmc() {}
+    const srcCode = REGISTER_CODES[src];
 
-  stc() {}
+    return BASE_CODE.XRA | srcCode;
+  }
 
-  cmp() {}
+  xri(val: number): number[] {
+    return [OP_CODE.XRI, this.lowerByte(val)];
+  }
 
-  cpi() {}
+  cma(): number {
+    return OP_CODE.CMA;
+  }
 
-  rlc() {}
+  cmc(): number {
+    return OP_CODE.CMC;
+  }
 
-  rrc() {}
+  stc(): number {
+    return OP_CODE.STC;
+  }
 
-  ral() {}
+  cmp(src: string): number {
+    this.validateRegister(src);
 
-  rar() {}
+    const srcCode = REGISTER_CODES[src];
+
+    return BASE_CODE.CMP | srcCode;
+  }
+
+  cpi(val: number): number[] {
+    return [OP_CODE.CPI, this.lowerByte(val)];
+  }
+
+  rlc(): number {
+    return OP_CODE.RLC;
+  }
+
+  rrc(): number {
+    return OP_CODE.RRC;
+  }
+
+  ral(): number {
+    return OP_CODE.RAL;
+  }
+
+  rar(): number {
+    return OP_CODE.RAR;
+  }
 
   // BRANCH
 
-  jmp() {}
+  jmp(addr: number): number[] {
+    this.validateAddress(addr);
 
-  jc() {}
+    return [OP_CODE.JMP, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  jnc() {}
+  jc(addr: number): number[] {
+    this.validateAddress(addr);
 
-  jz() {}
+    return [OP_CODE.JC, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  jnz() {}
+  jnc(addr: number): number[] {
+    this.validateAddress(addr);
 
-  jm() {}
+    return [OP_CODE.JNC, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  jp() {}
+  jz(addr: number): number[] {
+    this.validateAddress(addr);
 
-  jpe() {}
+    return [OP_CODE.JZ, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  jpo() {}
+  jnz(addr: number): number[] {
+    this.validateAddress(addr);
 
-  call() {}
+    return [OP_CODE.JNZ, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  cc() {}
+  jm(addr: number): number[] {
+    this.validateAddress(addr);
 
-  cnc() {}
+    return [OP_CODE.JM, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  cz() {}
+  jp(addr: number): number[] {
+    this.validateAddress(addr);
 
-  cnz() {}
+    return [OP_CODE.JP, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  cm() {}
+  jpe(addr: number): number[] {
+    this.validateAddress(addr);
 
-  cp() {}
+    return [OP_CODE.JPE, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  cpe() {}
+  jpo(addr: number): number[] {
+    this.validateAddress(addr);
 
-  cpo() {}
+    return [OP_CODE.JPO, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  ret() {}
+  call(addr: number): number[] {
+    this.validateAddress(addr);
 
-  rc() {}
+    return [OP_CODE.CALL, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  rnc() {}
+  cc(addr: number): number[] {
+    this.validateAddress(addr);
 
-  rz() {}
+    return [OP_CODE.CC, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  rnz() {}
+  cnc(addr: number): number[] {
+    this.validateAddress(addr);
 
-  rm() {}
+    return [OP_CODE.CNC, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  rp() {}
+  cz(addr: number): number[] {
+    this.validateAddress(addr);
 
-  rpe() {}
+    return [OP_CODE.CZ, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  rpo() {}
+  cnz(addr: number): number[] {
+    this.validateAddress(addr);
 
-  pchl() {}
+    return [OP_CODE.CNZ, this.lowerByte(addr), this.higherByte(addr)];
+  }
 
-  rst() {}
+  cm(addr: number): number[] {
+    this.validateAddress(addr);
+
+    return [OP_CODE.CM, this.lowerByte(addr), this.higherByte(addr)];
+  }
+
+  cp(addr: number): number[] {
+    this.validateAddress(addr);
+
+    return [OP_CODE.CP, this.lowerByte(addr), this.higherByte(addr)];
+  }
+
+  cpe(addr: number): number[] {
+    this.validateAddress(addr);
+
+    return [OP_CODE.CPE, this.lowerByte(addr), this.higherByte(addr)];
+  }
+
+  cpo(addr: number): number[] {
+    this.validateAddress(addr);
+
+    return [OP_CODE.CPO, this.lowerByte(addr), this.higherByte(addr)];
+  }
+
+  ret(): number {
+    return OP_CODE.RET;
+  }
+
+  rc(): number {
+    return OP_CODE.RC;
+  }
+
+  rnc(): number {
+    return OP_CODE.RNC;
+  }
+
+  rz(): number {
+    return OP_CODE.RZ;
+  }
+
+  rnz(): number {
+    return OP_CODE.RNZ;
+  }
+
+  rm(): number {
+    return OP_CODE.RM;
+  }
+
+  rp(): number {
+    return OP_CODE.RP;
+  }
+
+  rpe(): number {
+    return OP_CODE.RPE;
+  }
+
+  rpo(): number {
+    return OP_CODE.RPO;
+  }
+
+  pchl(): number {
+    return OP_CODE.PCHL;
+  }
+
+  rst(vec: number): number {
+    if (vec < 0 || vec > 7) {
+      throw this.error(`Invalid restart vector '${vec}'`);
+    }
+
+    return BASE_CODE.RST | (vec << 3);
+  }
 
   // STACK
 
-  push() {}
+  push(src: string): number {
+    this.validateStackRegisterPair(src);
 
-  pop() {}
+    const srcCode = STACK_REGISTER_PAIR_CODES[src];
 
-  xthl() {}
+    return BASE_CODE.PUSH | (srcCode << 4);
+  }
 
-  sphl() {}
+  pop(dest: string): number {
+    this.validateStackRegisterPair(dest);
+
+    const destCode = STACK_REGISTER_PAIR_CODES[dest];
+
+    return BASE_CODE.POP | (destCode << 4);
+  }
+
+  xthl(): number {
+    return OP_CODE.XTHL;
+  }
+
+  sphl(): number {
+    return OP_CODE.SPHL;
+  }
 
   // MACHINE CONTROL
 
-  in() {}
+  in(port: number): number[] {
+    return [OP_CODE.IN, this.lowerByte(port)];
+  }
 
-  out() {}
+  out(port: number): number[] {
+    return [OP_CODE.OUT, this.lowerByte(port)];
+  }
 
-  ei() {}
+  ei(): number {
+    return OP_CODE.EI;
+  }
 
-  di() {}
+  di(): number {
+    return OP_CODE.DI;
+  }
 
-  hlt() {}
+  hlt(): number {
+    return OP_CODE.HLT;
+  }
 
-  rim() {}
+  rim(): number {
+    return OP_CODE.RIM;
+  }
 
-  sim() {}
+  sim(): number {
+    return OP_CODE.SIM;
+  }
 
   nop(): number {
-    return NOP_OP_CODE;
+    return OP_CODE.NOP;
   }
 
   // utils
@@ -379,6 +519,13 @@ export class OpCodeEncoder {
       (valid && !valid.includes(registerPair))
     ) {
       throw this.error(`Invalid register pair '${registerPair}'`);
+    }
+  }
+
+  validateStackRegisterPair(registerPair: string): void {
+    const registerPairCode = STACK_REGISTER_PAIR_CODES[registerPair];
+    if (typeof registerPairCode !== "number") {
+      throw this.error(`Invalid stack register pair '${registerPair}'`);
     }
   }
 
