@@ -7,6 +7,11 @@
     "module": "ESNext",
     "types": ["vite/client"],
     "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./src/*"],
+      "@core/*": ["./src/core/*"],
+      "@assembler/*": ["./src/core/assembler/*"]
+    },
 
     /* Bundler mode */
     "moduleResolution": "bundler",

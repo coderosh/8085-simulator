@@ -1,12 +1,10 @@
-// ref: http://www.eazynotes.com/notes/microprocessor/notes/opcodes-table-of-intel-8085.pdf
-
 import {
   BASE_CODE,
   OP_CODE,
   REGISTER_CODES,
   REGISTER_PAIR_CODES,
   STACK_REGISTER_PAIR_CODES,
-} from "./constants";
+} from "@core/constants";
 
 export class OpCodeEncoder {
   // DATA TRANSFER

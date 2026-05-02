@@ -83,27 +83,7 @@ export const OP_CODE = {
   SIM: 0x30,
 };
 
-export const REGISTER_CODES: Record<string, number> = {
-  B: 0,
-  C: 1,
-  D: 2,
-  E: 3,
-  H: 4,
-  L: 5,
-  M: 6,
-  A: 7,
-};
-
-export const REGISTER_PAIR_CODES: Record<string, number> = {
-  B: 0, // BC pair
-  D: 1, // DE pair
-  H: 2, // HL pair
-  SP: 3, // Stack Pointer
-};
-
-export const STACK_REGISTER_PAIR_CODES: Record<string, number> = {
-  B: 0,
-  D: 1,
-  H: 2,
-  PSW: 3,
-};
+export const MNEMONICS = new Set([
+  ...Object.keys(BASE_CODE),
+  ...Object.keys(OP_CODE),
+]);
