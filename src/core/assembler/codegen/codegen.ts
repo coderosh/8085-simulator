@@ -3,6 +3,7 @@ import {
   type CodeGenSourceMapEntry,
   type InstructionDefinition,
   type InstructionNode,
+  type LabelNode,
   type Operand,
   type OperandKind,
   type ProgramNode,
@@ -53,9 +54,7 @@ export class CodeGen {
     for (const statement of node.body) {
       if (statement.type === "label") {
         if (this.symbols[statement.name] !== undefined) {
-          throw new Error(
-            `[CodeGen Error] Duplicate label '${statement.name}' at line ${statement.span.start.line}, col ${statement.span.start.column}`,
-          );
+          throw this.error(`Duplicate label '${statement.name}'`, statement);
         }
 
         this.symbols[statement.name] = this.address;
@@ -151,8 +150,9 @@ export class CodeGen {
       return this.resolveWordOperand(operand, expectedKind);
     }
 
-    throw new Error(
-      `[CodeGen Error] Unsupported operand kind '${expectedKind}' at line ${operand.span.start.line}, col ${operand.span.start.column}`,
+    throw this.operandError(
+      `Unsupported operand kind '${expectedKind}'`,
+      operand,
     );
   }
 
@@ -290,7 +290,7 @@ export class CodeGen {
     );
   }
 
-  private error(message: string, node: InstructionNode): Error {
+  private error(message: string, node: InstructionNode | LabelNode): Error {
     return new Error(
       `[CodeGen Error] ${message} at line ${node.span.start.line}, col ${node.span.start.column}`,
     );
