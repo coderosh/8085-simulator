@@ -3,6 +3,7 @@ import {
   Bus,
   Clock,
   ControlUnit,
+  CPU,
   IO,
   Memory,
   Registers,
@@ -22,6 +23,13 @@ export class Machine {
     this.bus,
     this.clock,
   );
+  readonly cpu = new CPU(
+    this.registers,
+    this.bus,
+    this.controlUnit,
+    this.alu,
+    this.clock,
+  );
 
   reset(): void {
     this.registers.reset();
@@ -38,11 +46,7 @@ export class Machine {
   }
 
   step(): MachineStepResult {
-    const opcode = this.controlUnit.fetchByte();
-
-    return {
-      opcode,
-    };
+    return this.cpu.step();
   }
 
   halt(): void {

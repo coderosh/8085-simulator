@@ -16,6 +16,11 @@ export const REGISTER_PAIR_CODES: Record<string, number> = {
   SP: 3,
 };
 
+export const REGISTER_PAIR_BD_CODES = [
+  REGISTER_PAIR_CODES.B,
+  REGISTER_PAIR_CODES.D,
+] as const;
+
 export const STACK_REGISTER_PAIR_CODES: Record<string, number> = {
   B: 0,
   D: 1,

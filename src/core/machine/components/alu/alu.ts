@@ -102,6 +102,6 @@ export class ALU {
   }
 
   private error(message: string): Error {
-    return new Error(`ALU Error: ${message}`);
+    return new Error(`[ALU Error] ${message}`);
   }
 }

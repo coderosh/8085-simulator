@@ -3,6 +3,8 @@ import type { InstructionDefinition } from "@core/types";
 import { higherByte, lowerByte } from "@core/utils";
 import {
   byteImmediate,
+  encodeRegisterCode,
+  encodeRegisterPairCode,
   oneByte,
   registerOpcode,
   registerPairShiftOpcode,
@@ -26,7 +28,7 @@ export const INSTRUCTION_SET = {
        * DEST:     xxx 000 -- need to shift left by 3
        * SRC:      000 xxx
        */
-      return [BASE_CODE.MOV | (dest.code << 3) | src.code];
+      return [BASE_CODE.MOV | encodeRegisterCode(dest.code) | src.code];
     },
   },
   MVI: {
@@ -34,7 +36,7 @@ export const INSTRUCTION_SET = {
     operands: ["register", "byte"],
     size: 2,
     encode: ([dest, value]) => [
-      BASE_CODE.MVI | (dest.code << 3),
+      BASE_CODE.MVI | encodeRegisterCode(dest.code),
       lowerByte(value.code),
     ],
   },
@@ -51,7 +53,7 @@ export const INSTRUCTION_SET = {
        * HIGH:     xxxxxxxx  (high byte of immediate)
        */
       return [
-        BASE_CODE.LXI | (dest.code << 4),
+        BASE_CODE.LXI | encodeRegisterPairCode(dest.code),
         lowerByte(value.code),
         higherByte(value.code),
       ];
@@ -445,7 +447,7 @@ export const INSTRUCTION_SET = {
     mnemonic: "RST",
     operands: ["restartVector"],
     size: 1,
-    encode: ([vector]) => [BASE_CODE.RST | (vector.code << 3)],
+    encode: ([vector]) => [BASE_CODE.RST | encodeRegisterCode(vector.code)],
   },
 
   // STACK

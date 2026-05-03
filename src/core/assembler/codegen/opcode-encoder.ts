@@ -5,6 +5,8 @@ import {
   REGISTER_PAIR_CODES,
   STACK_REGISTER_PAIR_CODES,
 } from "@core/constants";
+import { encodeRegisterCode, encodeRegisterPairCode } from "@core/isa/utils";
+import { higherByte, lowerByte } from "@core/utils";
 
 export class OpCodeEncoder {
   // DATA TRANSFER
@@ -24,7 +26,7 @@ export class OpCodeEncoder {
      * DEST:     xxx 000 -- need to shift left by 3
      * SRC:      000 xxx
      */
-    return BASE_CODE.MOV | (destCode << 3) | srcCode;
+    return BASE_CODE.MOV | encodeRegisterCode(destCode) | srcCode;
   }
 
   mvi(dest: string, val: number): number[] {
@@ -32,7 +34,7 @@ export class OpCodeEncoder {
 
     const destCode = REGISTER_CODES[dest];
 
-    return [BASE_CODE.MVI | (destCode << 3), this.lowerByte(val)];
+    return [BASE_CODE.MVI | encodeRegisterCode(destCode), this.lowerByte(val)];
   }
 
   lxi(dest: string, val: number): number[] {
@@ -48,7 +50,7 @@ export class OpCodeEncoder {
      * HIGH:     xxxxxxxx  (high byte of immediate)
      */
     return [
-      BASE_CODE.LXI | (destCode << 4),
+      BASE_CODE.LXI | encodeRegisterPairCode(destCode),
       this.lowerByte(val),
       this.higherByte(val),
     ];
@@ -65,7 +67,7 @@ export class OpCodeEncoder {
 
     const srcCode = REGISTER_PAIR_CODES[src];
 
-    return BASE_CODE.LDAX | (srcCode << 4);
+    return BASE_CODE.LDAX | encodeRegisterPairCode(srcCode);
   }
 
   lhld(addr: number): number[] {
@@ -85,7 +87,7 @@ export class OpCodeEncoder {
 
     const srcCode = REGISTER_PAIR_CODES[src];
 
-    return BASE_CODE.STAX | (srcCode << 4);
+    return BASE_CODE.STAX | encodeRegisterPairCode(srcCode);
   }
 
   shld(addr: number): number[] {
@@ -145,7 +147,7 @@ export class OpCodeEncoder {
 
     const srcCode = REGISTER_PAIR_CODES[src];
 
-    return BASE_CODE.DAD | (srcCode << 4);
+    return BASE_CODE.DAD | encodeRegisterPairCode(srcCode);
   }
 
   sui(val: number): number[] {
@@ -161,7 +163,7 @@ export class OpCodeEncoder {
 
     const destCode = REGISTER_CODES[dest];
 
-    return BASE_CODE.INR | (destCode << 3);
+    return BASE_CODE.INR | encodeRegisterCode(destCode);
   }
 
   inx(dest: string): number {
@@ -169,7 +171,7 @@ export class OpCodeEncoder {
 
     const destCode = REGISTER_PAIR_CODES[dest];
 
-    return BASE_CODE.INX | (destCode << 4);
+    return BASE_CODE.INX | encodeRegisterPairCode(destCode);
   }
 
   dcr(dest: string): number {
@@ -177,7 +179,7 @@ export class OpCodeEncoder {
 
     const destCode = REGISTER_CODES[dest];
 
-    return BASE_CODE.DCR | (destCode << 3);
+    return BASE_CODE.DCR | encodeRegisterCode(destCode);
   }
 
   dcx(dest: string): number {
@@ -185,7 +187,7 @@ export class OpCodeEncoder {
 
     const destCode = REGISTER_PAIR_CODES[dest];
 
-    return BASE_CODE.DCX | (destCode << 4);
+    return BASE_CODE.DCX | encodeRegisterPairCode(destCode);
   }
 
   daa(): number {
@@ -421,7 +423,7 @@ export class OpCodeEncoder {
       throw this.error(`Invalid restart vector '${vec}'`);
     }
 
-    return BASE_CODE.RST | (vec << 3);
+    return BASE_CODE.RST | encodeRegisterCode(vec);
   }
 
   // STACK
@@ -431,7 +433,7 @@ export class OpCodeEncoder {
 
     const srcCode = STACK_REGISTER_PAIR_CODES[src];
 
-    return BASE_CODE.PUSH | (srcCode << 4);
+    return BASE_CODE.PUSH | encodeRegisterPairCode(srcCode);
   }
 
   pop(dest: string): number {
@@ -439,7 +441,7 @@ export class OpCodeEncoder {
 
     const destCode = STACK_REGISTER_PAIR_CODES[dest];
 
-    return BASE_CODE.POP | (destCode << 4);
+    return BASE_CODE.POP | encodeRegisterPairCode(destCode);
   }
 
   xthl(): number {
@@ -487,11 +489,11 @@ export class OpCodeEncoder {
   // utils
 
   lowerByte(value: number): number {
-    return value & 0xff;
+    return lowerByte(value);
   }
 
   higherByte(value: number): number {
-    return (value >> 8) & 0xff;
+    return higherByte(value);
   }
 
   validateAddress(addr: number): void {
@@ -528,6 +530,6 @@ export class OpCodeEncoder {
   }
 
   error(message: string): Error {
-    return new Error(`[OpCodeEncoder error]: ${message}`);
+    return new Error(`[OpCodeEncoder Error] ${message}`);
   }
 }
