@@ -163,4 +163,69 @@ RET`);
     expect(machine.registers.pc).toBe(0x2009);
     expect(machine.controlUnit.isHalted()).toBe(true);
   });
+
+  it("updates interrupt enable state with EI, DI, and RIM", () => {
+    const result = assemble(`EI
+RIM
+DI
+RIM
+HLT`);
+    const machine = new Machine();
+
+    machine.loadProgram(result.bytes);
+
+    machine.step();
+    expect(machine.interrupts.enabled).toBe(true);
+
+    machine.step();
+    expect(machine.registers.a).toBe(0x08);
+
+    machine.step();
+    expect(machine.interrupts.enabled).toBe(false);
+
+    machine.step();
+    expect(machine.registers.a).toBe(0x00);
+  });
+
+  it("updates interrupt masks and serial output with SIM", () => {
+    const result = assemble(`MVI A, 0CFH
+SIM
+RIM
+HLT`);
+    const machine = new Machine();
+
+    machine.loadProgram(result.bytes);
+
+    machine.step();
+    machine.step();
+
+    expect(machine.interrupts.masks).toEqual({
+      rst55: true,
+      rst65: true,
+      rst75: true,
+    });
+    expect(machine.interrupts.serialOutputEnabled).toBe(true);
+    expect(machine.interrupts.serialOutput).toBe(true);
+
+    machine.step();
+    expect(machine.registers.a).toBe(0x07);
+  });
+
+  it("lets external interrupt requests appear in RIM status", () => {
+    const result = assemble(`RIM
+HLT`);
+    const machine = new Machine();
+
+    machine.loadProgram(result.bytes);
+    machine.interrupts.request("rst55");
+    machine.interrupts.request("rst75");
+
+    machine.step();
+    expect(machine.registers.a).toBe(0x50);
+
+    machine.interrupts.clear("rst55");
+    machine.registers.pc = 0;
+    machine.step();
+    expect(machine.registers.a).toBe(0x40);
+  });
 });

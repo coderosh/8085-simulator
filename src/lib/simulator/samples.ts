@@ -129,4 +129,18 @@ XCHG
 SHLD 2810H
 HLT`,
   },
+  {
+    name: "Interrupt Pending",
+    description: "Read interrupt status with RIM and branch when a request is pending.",
+    source: `; In the CPU panel, click Request on RST 5.5 or RST 7.5 before stepping RIM
+EI
+RIM
+STA 2900H
+ANI 70H
+JZ IDLE
+MVI B, 01H
+JMP DONE
+IDLE: MVI B, 00H
+DONE: HLT`,
+  },
 ];

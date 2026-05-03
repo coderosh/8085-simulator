@@ -1,3 +1,4 @@
+import { memo, useCallback } from "react";
 import { Cable, Cpu, Database, FileCode2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useSimulatorStore } from "@/stores";
 
 import type { SimulatorPanel } from "./types";
 
@@ -21,40 +23,65 @@ const sidebarItems = [
   label: string;
 }[];
 
-type SimulatorSidebarProps = {
-  activePanel: SimulatorPanel;
-  onPanelChange: (panel: SimulatorPanel) => void;
-};
+export const SimulatorSidebar = memo(function SimulatorSidebar() {
+  const activePanel = useSimulatorStore((state) => state.activePanel);
+  const setActivePanel = useSimulatorStore((state) => state.setActivePanel);
 
-export function SimulatorSidebar({
-  activePanel,
-  onPanelChange,
-}: SimulatorSidebarProps) {
   return (
     <aside className="flex flex-col items-center gap-4 border-r bg-sidebar py-5 text-sidebar-foreground">
       {sidebarItems.map((item) => {
         const isActive = item.id === activePanel;
 
         return (
-          <Tooltip key={item.id}>
-            <TooltipTrigger
-              render={
-                <Button
-                  size="icon"
-                  variant={isActive ? "default" : "ghost"}
-                  className={cn(!isActive && "text-sidebar-foreground")}
-                  aria-pressed={isActive}
-                  onClick={() => onPanelChange(item.id)}
-                >
-                  <item.icon />
-                  <span className="sr-only">{item.label}</span>
-                </Button>
-              }
-            />
-            <TooltipContent side="right">{item.label}</TooltipContent>
-          </Tooltip>
+          <SidebarItem
+            key={item.id}
+            icon={item.icon}
+            id={item.id}
+            isActive={isActive}
+            label={item.label}
+            onPanelChange={setActivePanel}
+          />
         );
       })}
     </aside>
   );
-}
+});
+
+const SidebarItem = memo(function SidebarItem({
+  icon: Icon,
+  id,
+  isActive,
+  label,
+  onPanelChange,
+}: {
+  icon: typeof FileCode2;
+  id: SimulatorPanel;
+  isActive: boolean;
+  label: string;
+  onPanelChange: (panel: SimulatorPanel) => void;
+}) {
+  const changePanel = useCallback(
+    () => onPanelChange(id),
+    [id, onPanelChange],
+  );
+
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <Button
+            size="icon"
+            variant={isActive ? "default" : "ghost"}
+            className={cn(!isActive && "text-sidebar-foreground")}
+            aria-pressed={isActive}
+            onClick={changePanel}
+          >
+            <Icon />
+            <span className="sr-only">{label}</span>
+          </Button>
+        }
+      />
+      <TooltipContent side="right">{label}</TooltipContent>
+    </Tooltip>
+  );
+});

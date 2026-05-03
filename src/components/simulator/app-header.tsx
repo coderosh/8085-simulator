@@ -1,3 +1,4 @@
+import { memo, useCallback } from "react";
 import {
   Braces,
   Cpu,
@@ -26,26 +27,21 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { AssemblySample } from "@/lib/simulator/samples";
+import { samples } from "@/lib/simulator/samples";
+import { useSimulatorStore } from "@/stores";
 
-type AppHeaderProps = {
-  executionFinished: boolean;
-  samples: AssemblySample[];
-  onAssemble: () => void;
-  onReset: () => void;
-  onRun: () => void;
-  onSampleLoad: (source: string) => void;
-  onStep: () => void;
-};
+export const AppHeader = memo(function AppHeader() {
+  const executionFinished = useSimulatorStore((state) => state.executionFinished);
+  const assembleProgram = useSimulatorStore((state) => state.assembleProgram);
+  const resetProgram = useSimulatorStore((state) => state.resetProgram);
+  const runProgram = useSimulatorStore((state) => state.runProgram);
+  const loadSample = useSimulatorStore((state) => state.loadSample);
+  const stepProgram = useSimulatorStore((state) => state.stepProgram);
+  const assembleCurrentSource = useCallback(
+    () => assembleProgram(),
+    [assembleProgram],
+  );
 
-export function AppHeader({
-  executionFinished,
-  samples,
-  onAssemble,
-  onReset,
-  onRun,
-  onSampleLoad,
-  onStep,
-}: AppHeaderProps) {
   return (
     <header className="flex h-16 shrink-0 items-center border-b bg-card px-4">
       <div className="flex min-w-0 flex-1 items-center gap-4">
@@ -70,18 +66,11 @@ export function AppHeader({
               <DropdownMenuLabel>Assembly samples</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {samples.map((sample) => (
-                <DropdownMenuItem
+                <SampleMenuItem
                   key={sample.name}
-                  onClick={() => onSampleLoad(sample.source)}
-                >
-                  <FileCode2 />
-                  <div className="min-w-0">
-                    <div>{sample.name}</div>
-                    <div className="truncate text-xs text-muted-foreground">
-                      {sample.description}
-                    </div>
-                  </div>
-                </DropdownMenuItem>
+                  sample={sample}
+                  onSampleLoad={loadSample}
+                />
               ))}
             </DropdownMenuGroup>
           </DropdownMenuContent>
@@ -92,7 +81,7 @@ export function AppHeader({
         <Tooltip>
           <TooltipTrigger
             render={
-              <Button size="icon" variant="ghost" onClick={onAssemble}>
+              <Button size="icon" variant="ghost" onClick={assembleCurrentSource}>
                 <Braces />
                 <span className="sr-only">Assemble</span>
               </Button>
@@ -107,7 +96,7 @@ export function AppHeader({
                 disabled={executionFinished}
                 size="icon"
                 variant="ghost"
-                onClick={onRun}
+                onClick={runProgram}
               >
                 <Play />
                 <span className="sr-only">Run</span>
@@ -125,7 +114,7 @@ export function AppHeader({
                 disabled={executionFinished}
                 size="icon"
                 variant="ghost"
-                onClick={onStep}
+                onClick={stepProgram}
               >
                 <StepForward />
                 <span className="sr-only">Step</span>
@@ -139,7 +128,7 @@ export function AppHeader({
         <Tooltip>
           <TooltipTrigger
             render={
-              <Button size="icon" variant="ghost" onClick={onReset}>
+              <Button size="icon" variant="ghost" onClick={resetProgram}>
                 <RotateCcw />
                 <span className="sr-only">Reset</span>
               </Button>
@@ -152,4 +141,29 @@ export function AppHeader({
       </div>
     </header>
   );
-}
+});
+
+const SampleMenuItem = memo(function SampleMenuItem({
+  sample,
+  onSampleLoad,
+}: {
+  sample: AssemblySample;
+  onSampleLoad: (source: string) => void;
+}) {
+  const loadSample = useCallback(
+    () => onSampleLoad(sample.source),
+    [onSampleLoad, sample.source],
+  );
+
+  return (
+    <DropdownMenuItem onClick={loadSample}>
+      <FileCode2 />
+      <div className="min-w-0">
+        <div>{sample.name}</div>
+        <div className="truncate text-xs text-muted-foreground">
+          {sample.description}
+        </div>
+      </div>
+    </DropdownMenuItem>
+  );
+});

@@ -7,6 +7,7 @@ import { ALU, type AluResult } from "../alu";
 import { Bus } from "../bus";
 import { Clock } from "../clock";
 import { ControlUnit } from "../control-unit";
+import { InterruptController } from "../interrupts";
 import { Registers } from "../registers";
 import {
   ACCUMULATOR_OPERATIONS,
@@ -26,6 +27,7 @@ export class CPU {
   private bus: Bus;
   private clock: Clock;
   private controlUnit: ControlUnit;
+  private interrupts: InterruptController;
   private decoder: InstructionDecoder;
   private registers: Registers;
 
@@ -33,6 +35,7 @@ export class CPU {
     registers: Registers,
     bus: Bus,
     controlUnit: ControlUnit,
+    interrupts: InterruptController,
     alu: ALU,
     clock: Clock,
     decoder = new InstructionDecoder(),
@@ -40,6 +43,7 @@ export class CPU {
     this.registers = registers;
     this.bus = bus;
     this.controlUnit = controlUnit;
+    this.interrupts = interrupts;
     this.alu = alu;
     this.clock = clock;
     this.decoder = decoder;
@@ -178,9 +182,16 @@ export class CPU {
         this.bus.output(this.controlUnit.fetchByte(), this.registers.a);
         return;
       case "EI":
+        this.interrupts.enable();
+        return;
       case "DI":
+        this.interrupts.disable();
+        return;
       case "RIM":
+        this.registers.a = this.interrupts.readMask();
+        return;
       case "SIM":
+        this.interrupts.setMask(this.registers.a);
         return;
     }
 

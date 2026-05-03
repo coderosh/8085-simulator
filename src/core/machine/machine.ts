@@ -5,6 +5,7 @@ import {
   ControlUnit,
   CPU,
   IO,
+  InterruptController,
   Memory,
   Registers,
 } from "./components";
@@ -17,6 +18,7 @@ export class Machine {
   readonly clock = new Clock();
   readonly memory = new Memory();
   readonly io = new IO();
+  readonly interrupts = new InterruptController();
   readonly bus = new Bus(this.memory, this.io);
   readonly controlUnit = new ControlUnit(
     this.registers,
@@ -27,6 +29,7 @@ export class Machine {
     this.registers,
     this.bus,
     this.controlUnit,
+    this.interrupts,
     this.alu,
     this.clock,
   );
@@ -36,6 +39,7 @@ export class Machine {
     this.clock.reset();
     this.memory.reset();
     this.io.reset();
+    this.interrupts.reset();
     this.bus.reset();
     this.controlUnit.reset();
   }
@@ -65,6 +69,7 @@ export class Machine {
       bus: this.bus.snapshot(),
       memory: this.memory.snapshot(),
       io: this.io.snapshot(),
+      interrupts: this.interrupts.snapshot(),
       controlUnit: this.controlUnit.snapshot(),
     };
   }

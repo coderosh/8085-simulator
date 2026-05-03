@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatByte } from "@/lib/simulator/format";
+import { useSimulatorStore } from "@/stores";
 
 import { MemoryCellInput } from "./memory-cell-input";
 
@@ -17,12 +18,9 @@ const columns = Array.from({ length: 16 }, (_, index) => index);
 const rowCount = 16;
 const portCount = columns.length * rowCount;
 
-type IOPanelProps = {
-  ports: Uint8Array;
-  onPortChange: (port: number, value: number) => void;
-};
-
-export function IOPanel({ ports, onPortChange }: IOPanelProps) {
+export function IOPanel() {
+  const ports = useSimulatorStore((state) => state.ports);
+  const updatePort = useSimulatorStore((state) => state.updatePort);
   const rows = Array.from({ length: rowCount }, (_, rowIndex) => {
     const rowPort = rowIndex * 16;
 
@@ -82,7 +80,7 @@ export function IOPanel({ ports, onPortChange }: IOPanelProps) {
                       <MemoryCellInput
                         ariaLabel={`I/O port ${formatByte(port.port)}`}
                         value={port.value}
-                        onCommit={(value) => onPortChange(port.port, value)}
+                        onCommit={(value) => updatePort(port.port, value)}
                       />
                     </TableCell>
                   ))}

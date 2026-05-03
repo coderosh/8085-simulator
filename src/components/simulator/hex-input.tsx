@@ -31,7 +31,7 @@ export function HexInput({
 
     setDraft(null);
 
-    if (parsed === null) return;
+    if (parsed === null || parsed === value) return;
 
     onCommit(parsed);
   };

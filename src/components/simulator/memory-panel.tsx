@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { BASE_ADDRESS } from "@/lib/simulator/constants";
 import { formatWord, parseHexValue } from "@/lib/simulator/format";
+import { useSimulatorStore } from "@/stores";
 
 import { MemoryCellInput } from "./memory-cell-input";
 
@@ -20,13 +21,9 @@ const columns = Array.from({ length: 16 }, (_, index) => index);
 const rowCount = 8;
 const byteCount = columns.length * rowCount;
 
-export function MemoryPanel({
-  memory,
-  onMemoryChange,
-}: {
-  memory: Uint8Array;
-  onMemoryChange: (address: number, value: number) => void;
-}) {
+export function MemoryPanel() {
+  const memory = useSimulatorStore((state) => state.memory);
+  const updateMemory = useSimulatorStore((state) => state.updateMemory);
   const [addressDraft, setAddressDraft] = useState(formatWord(BASE_ADDRESS));
   const parsedAddress = parseHexValue(addressDraft, 0xffff);
   const pageAddress = ((parsedAddress ?? BASE_ADDRESS) & 0xfff0) >>> 0;
@@ -98,7 +95,7 @@ export function MemoryPanel({
                       <MemoryCellInput
                         ariaLabel={`Memory ${formatWord(byte.address)}`}
                         value={byte.value}
-                        onCommit={(value) => onMemoryChange(byte.address, value)}
+                        onCommit={(value) => updateMemory(byte.address, value)}
                       />
                     </TableCell>
                   ))}

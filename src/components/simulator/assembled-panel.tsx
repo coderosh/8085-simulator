@@ -1,20 +1,17 @@
+import { memo } from "react";
 import { Braces } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { AssembledRow } from "@/lib/simulator/assembly";
 import { formatByte, formatWord } from "@/lib/simulator/format";
 import { cn } from "@/lib/utils";
+import { useSimulatorStore } from "@/stores";
 
-export function AssembledPanel({
-  rows,
-  activeAddress,
-  byteCount,
-}: {
-  rows: AssembledRow[];
-  activeAddress: number;
-  byteCount: number;
-}) {
+export const AssembledPanel = memo(function AssembledPanel() {
+  const rows = useSimulatorStore((state) => state.rows);
+  const activeAddress = useSimulatorStore((state) => state.activeAddress);
+  const byteCount = useSimulatorStore((state) => state.result.bytes.length);
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex h-[3.25rem] shrink-0 items-center justify-between gap-3 border-b px-5">
@@ -51,4 +48,4 @@ export function AssembledPanel({
       </ScrollArea>
     </div>
   );
-}
+});

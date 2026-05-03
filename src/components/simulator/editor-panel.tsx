@@ -1,26 +1,18 @@
 import { ChevronDown, ChevronUp, FileCode2, Terminal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useSimulatorStore } from "@/stores";
 
 import { CodeEditor } from "./code-editor";
 
-type EditorPanelProps = {
-  activeLine?: number;
-  consoleOpen: boolean;
-  message: string;
-  source: string;
-  onConsoleToggle: () => void;
-  onSourceChange: (source: string) => void;
-};
+export function EditorPanel() {
+  const activeLine = useSimulatorStore((state) => state.activeLine);
+  const consoleOpen = useSimulatorStore((state) => state.consoleOpen);
+  const message = useSimulatorStore((state) => state.message);
+  const source = useSimulatorStore((state) => state.source);
+  const setSource = useSimulatorStore((state) => state.setSource);
+  const toggleConsole = useSimulatorStore((state) => state.toggleConsole);
 
-export function EditorPanel({
-  activeLine,
-  consoleOpen,
-  message,
-  source,
-  onConsoleToggle,
-  onSourceChange,
-}: EditorPanelProps) {
   return (
     <section className="grid h-full min-h-0 grid-rows-[3.25rem_minmax(0,1fr)_auto] bg-card">
       <div className="flex items-center justify-between border-b px-5">
@@ -33,7 +25,7 @@ export function EditorPanel({
             size="sm"
             variant={consoleOpen ? "secondary" : "ghost"}
             aria-pressed={consoleOpen}
-            onClick={onConsoleToggle}
+            onClick={toggleConsole}
           >
             <Terminal data-icon="inline-start" />
             {consoleOpen ? (
@@ -50,7 +42,7 @@ export function EditorPanel({
         <CodeEditor
           activeLine={activeLine}
           value={source}
-          onChange={onSourceChange}
+          onChange={setSource}
         />
       </div>
       {consoleOpen ? (
