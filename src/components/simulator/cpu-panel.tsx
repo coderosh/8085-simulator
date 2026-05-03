@@ -293,21 +293,6 @@ const RegisterInput = memo(function RegisterInput({
   );
 });
 
-const ExecutionStat = memo(function ExecutionStat({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-md bg-muted/40 px-3 py-2">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="font-mono text-sm font-semibold">{value}</span>
-    </div>
-  );
-});
-
 const PointerRow = memo(function PointerRow({
   label,
   value,
