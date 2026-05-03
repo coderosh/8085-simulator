@@ -7,6 +7,7 @@ import { CodeEditor } from "./code-editor";
 
 export function EditorPanel() {
   const activeLine = useSimulatorStore((state) => state.activeLine);
+  const assemblyError = useSimulatorStore((state) => state.assemblyError);
   const consoleOpen = useSimulatorStore((state) => state.consoleOpen);
   const message = useSimulatorStore((state) => state.message);
   const source = useSimulatorStore((state) => state.source);
@@ -41,6 +42,7 @@ export function EditorPanel() {
       <div className="h-full min-h-0 overflow-hidden">
         <CodeEditor
           activeLine={activeLine}
+          diagnostic={assemblyError}
           value={source}
           onChange={setSource}
         />

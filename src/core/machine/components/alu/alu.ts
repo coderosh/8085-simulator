@@ -1,3 +1,4 @@
+import { SimulatorError } from "@core/errors";
 import { lowerByte } from "@core/utils";
 import { Flags } from "../registers";
 import type { AluLogicOperation, AluResult } from "./types";
@@ -102,6 +103,6 @@ export class ALU {
   }
 
   private error(message: string): Error {
-    return new Error(`[ALU Error] ${message}`);
+    return new SimulatorError(message, { code: "ALU_ERROR", component: "ALU" });
   }
 }

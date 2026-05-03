@@ -1,3 +1,5 @@
+import { isSimulatorError } from "@core/errors";
+
 export function formatByte(value: number) {
   return value.toString(16).toUpperCase().padStart(2, "0");
 }
@@ -7,6 +9,10 @@ export function formatWord(value: number) {
 }
 
 export function getErrorMessage(error: unknown) {
+  if (isSimulatorError(error)) {
+    return error.toString();
+  }
+
   return error instanceof Error ? error.message : String(error);
 }
 

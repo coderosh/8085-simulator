@@ -8,6 +8,7 @@ import type {
   SourceSpan,
   Token,
 } from "@core/types";
+import { SimulatorError } from "@core/errors";
 
 export class Parser {
   private tokens: Token[];
@@ -183,11 +184,16 @@ export class Parser {
     return this.check("identifier") && this.checkNext("colon");
   }
 
-  private error(msg: string): Error {
+  private error(message: string): Error {
     const token = this.peek();
-    return new Error(
-      `[Parser Error] ${msg} at line ${token.span.start.line}, col ${token.span.start.column}, token=${token.type}:${token.value}`,
-    );
+    return new SimulatorError(message, {
+      code: "PARSER_ERROR",
+      component: "Parser",
+      details: {
+        token: `${token.type}:${token.value}`,
+      },
+      span: token.span,
+    });
   }
 
   private spanFrom(start: SourceSpan, end: SourceSpan): SourceSpan {

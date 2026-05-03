@@ -1,4 +1,5 @@
 import { REGISTER_CODES } from "@core/constants";
+import { SimulatorError } from "@core/errors";
 import { InstructionDecoder } from "@core/isa";
 import { registerName } from "@core/isa/utils";
 import type { DecodedInstruction, DecodedOperand } from "@core/types";
@@ -532,6 +533,6 @@ export class CPU {
   }
 
   private error(message: string): Error {
-    return new Error(`[CPU Error] ${message}`);
+    return new SimulatorError(message, { code: "CPU_ERROR", component: "CPU" });
   }
 }

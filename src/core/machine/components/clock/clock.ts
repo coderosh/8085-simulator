@@ -1,3 +1,5 @@
+import { SimulatorError } from "@core/errors";
+
 import type { ClockSnapshot } from "./types";
 
 export class Clock {
@@ -52,6 +54,9 @@ export class Clock {
   }
 
   private error(message: string): Error {
-    return new Error(`[Clock Error] ${message}`);
+    return new SimulatorError(message, {
+      code: "CLOCK_ERROR",
+      component: "Clock",
+    });
   }
 }

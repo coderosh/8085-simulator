@@ -1,3 +1,4 @@
+import { SimulatorError } from "@core/errors";
 import type { DecodedInstruction } from "@core/types";
 import { DECODE_TABLE } from "./decode-table";
 import { resolveImmediateOperand } from "./operands";
@@ -21,6 +22,9 @@ export class InstructionDecoder {
   }
 
   private error(message: string): Error {
-    return new Error(`[InstructionDecoder Error] ${message}`);
+    return new SimulatorError(message, {
+      code: "INSTRUCTION_DECODER_ERROR",
+      component: "InstructionDecoder",
+    });
   }
 }

@@ -1,3 +1,5 @@
+import { SimulatorError } from "@core/errors";
+
 import { Bus } from "../bus";
 import { Clock } from "../clock";
 import { Registers } from "../registers";
@@ -57,6 +59,9 @@ export class ControlUnit {
   }
 
   private error(message: string): Error {
-    return new Error(`[ControlUnit Error] ${message}`);
+    return new SimulatorError(message, {
+      code: "CONTROL_UNIT_ERROR",
+      component: "ControlUnit",
+    });
   }
 }

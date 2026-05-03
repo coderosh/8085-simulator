@@ -1,3 +1,4 @@
+import { SimulatorError } from "@core/errors";
 import { higherByte, lowerByte, toWord } from "@core/utils";
 import type { FlagName, FlagState, RegistersSnapshot } from "./types";
 import { Flags } from "./flags";
@@ -173,6 +174,9 @@ export class Registers {
   }
 
   private error(message: string): Error {
-    return new Error(`[Registers Error] ${message}`);
+    return new SimulatorError(message, {
+      code: "REGISTERS_ERROR",
+      component: "Registers",
+    });
   }
 }

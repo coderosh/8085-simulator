@@ -16,6 +16,7 @@ import {
   REGISTER_PAIR_CODES,
   STACK_REGISTER_PAIR_CODES,
 } from "@core/constants";
+import { SimulatorError } from "@core/errors";
 import { getInstructionDefinition } from "@core/isa";
 import { getInstructionSize } from "@core/utils";
 
@@ -204,21 +205,21 @@ export class CodeGen {
       return this.resolveWordOperand(operand, expectedKind);
     }
 
-    throw this.operandError(
-      `Unsupported operand kind '${expectedKind}'`,
-      operand,
-    );
+      throw this.error(
+        `Unsupported operand kind '${expectedKind}'`,
+        operand,
+      );
   }
 
   private resolveRegister(operand: Operand): ResolvedOperand {
     if (operand.type !== "register") {
-      throw this.operandError("Expected register operand", operand);
+      throw this.error("Expected register operand", operand);
     }
 
     const code = REGISTER_CODES[operand.value];
 
     if (code === undefined) {
-      throw this.operandError(`Invalid register '${operand.value}'`, operand);
+      throw this.error(`Invalid register '${operand.value}'`, operand);
     }
 
     return {
@@ -233,13 +234,13 @@ export class CodeGen {
     valid?: string[],
   ): ResolvedOperand {
     if (operand.type !== "register") {
-      throw this.operandError("Expected register pair operand", operand);
+      throw this.error("Expected register pair operand", operand);
     }
 
     const code = REGISTER_PAIR_CODES[operand.value];
 
     if (code === undefined || (valid && !valid.includes(operand.value))) {
-      throw this.operandError(
+      throw this.error(
         `Invalid register pair '${operand.value}'`,
         operand,
       );
@@ -254,13 +255,13 @@ export class CodeGen {
 
   private resolveStackRegisterPair(operand: Operand): ResolvedOperand {
     if (operand.type !== "register") {
-      throw this.operandError("Expected stack register pair operand", operand);
+      throw this.error("Expected stack register pair operand", operand);
     }
 
     const code = STACK_REGISTER_PAIR_CODES[operand.value];
 
     if (code === undefined) {
-      throw this.operandError(
+      throw this.error(
         `Invalid stack register pair '${operand.value}'`,
         operand,
       );
@@ -278,7 +279,7 @@ export class CodeGen {
     kind: "byte" | "port" | "restartVector",
   ): ResolvedOperand {
     if (operand.type !== "number") {
-      throw this.operandError(`Expected ${kind} operand`, operand);
+      throw this.error(`Expected ${kind} operand`, operand);
     }
 
     const max = kind === "restartVector" ? 7 : 0xff;
@@ -314,13 +315,13 @@ export class CodeGen {
       const value = this.symbols[operand.value];
 
       if (value === undefined) {
-        throw this.operandError(`Undefined symbol '${operand.value}'`, operand);
+        throw this.error(`Undefined symbol '${operand.value}'`, operand);
       }
 
       return value;
     }
 
-    throw this.operandError("Expected 16-bit value operand", operand);
+    throw this.error("Expected 16-bit value operand", operand);
   }
 
   private validateNumberRange(
@@ -331,7 +332,7 @@ export class CodeGen {
     operand: Operand,
   ): void {
     if (value < min || value > max) {
-      throw this.operandError(
+      throw this.error(
         `${kind} operand ${value} is out of range (${min} - ${max})`,
         operand,
       );
@@ -344,15 +345,14 @@ export class CodeGen {
     }
   }
 
-  private operandError(message: string, operand: Operand): Error {
-    return new Error(
-      `[CodeGen Error] ${message} at line ${operand.span.start.line}, col ${operand.span.start.column}`,
-    );
-  }
-
-  private error(message: string, node: InstructionNode | LabelNode | OrgNode): Error {
-    return new Error(
-      `[CodeGen Error] ${message} at line ${node.span.start.line}, col ${node.span.start.column}`,
-    );
+  private error(
+    message: string,
+    node: InstructionNode | LabelNode | OrgNode | Operand,
+  ): Error {
+    return new SimulatorError(message, {
+      code: "CODEGEN_ERROR",
+      component: "CodeGen",
+      span: node.span,
+    });
   }
 }

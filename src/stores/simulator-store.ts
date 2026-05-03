@@ -1,12 +1,14 @@
 import { create } from "zustand";
 
 import { assemble } from "@/core/assembler";
+import { isSimulatorError } from "@/core/errors";
 import type { Machine, MachineSnapshot } from "@/core/machine";
 import type { RestartInterrupt } from "@/core/machine/components/interrupts";
 import type { InterruptSnapshot } from "@/core/machine/components/interrupts";
 import type { RegistersSnapshot } from "@/core/machine/components/registers";
 import type { FlagName } from "@/core/machine/components/registers";
 import type { CodeGenResult } from "@/core/types";
+import type { SourceSpan } from "@/core/types";
 import {
   buildAssembledRows,
   createLoadedMachine,
@@ -31,6 +33,7 @@ const initialRows = buildAssembledRows(initialResult, initialSource);
 type SimulatorState = {
   activeAddress: number;
   activeLine?: number;
+  assemblyError: AssemblyErrorDiagnostic | null;
   activePanel: SimulatorPanel;
   assembledSource: string;
   consoleOpen: boolean;
@@ -64,9 +67,16 @@ type SimulatorState = {
   updateRegister: (register: string, value: number) => void;
 };
 
+export type AssemblyErrorDiagnostic = {
+  message: string;
+  severity: "error" | "warning" | "info";
+  span: SourceSpan;
+};
+
 export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   activeAddress: BASE_ADDRESS,
   activeLine: getActiveLine(initialRows, BASE_ADDRESS),
+  assemblyError: null,
   activePanel: "editor",
   assembledSource: initialSource,
   consoleOpen: false,
@@ -95,6 +105,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       set({
         activeAddress,
         activeLine: getActiveLine(rows, activeAddress),
+        assemblyError: null,
         assembledSource: source,
         lastOpcode: null,
         machine: nextMachine,
@@ -106,6 +117,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     } catch (error) {
       set({
         activePanel: "editor",
+        assemblyError: getAssemblyErrorDiagnostic(error),
         consoleOpen: true,
         message: getErrorMessage(error),
       });
@@ -114,6 +126,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   loadSample: (source) => {
     set({
       activePanel: "editor",
+      assemblyError: null,
       consoleOpen: false,
       message: "Sample loaded into editor.",
       source,
@@ -177,7 +190,10 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   },
   setActivePanel: (activePanel) =>
     set((state) => (state.activePanel === activePanel ? state : { activePanel })),
-  setSource: (source) => set((state) => (state.source === source ? state : { source })),
+  setSource: (source) =>
+    set((state) =>
+      state.source === source ? state : { assemblyError: null, source },
+    ),
   stepProgram: () => {
     const { machine } = get();
 
@@ -332,6 +348,18 @@ function getActiveLine(rows: AssembledRow[], activeAddress: number) {
       activeAddress >= row.address &&
       activeAddress < row.address + row.bytes.length,
   )?.line;
+}
+
+function getAssemblyErrorDiagnostic(error: unknown): AssemblyErrorDiagnostic | null {
+  if (!isSimulatorError(error) || !error.span) {
+    return null;
+  }
+
+  return {
+    message: error.toString(),
+    severity: error.severity,
+    span: error.span,
+  };
 }
 
 function formatInterruptName(interrupt: RestartInterrupt): string {

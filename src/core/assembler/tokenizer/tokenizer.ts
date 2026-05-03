@@ -1,4 +1,5 @@
 import { MNEMONICS, REGISTERS } from "@core/constants";
+import { SimulatorError, spanAt } from "@core/errors";
 import type { SourcePosition, Token, TokenType } from "@core/types";
 
 const DIRECTIVES = new Set(["ORG"]);
@@ -224,9 +225,11 @@ export class Tokenizer {
     );
   }
 
-  private error(msg: string, position = this.currentPosition()): Error {
-    return new Error(
-      `[Tokenizer Error] ${msg} at line ${position.line}, col ${position.column}`,
-    );
+  private error(message: string, position = this.currentPosition()): Error {
+    return new SimulatorError(message, {
+      code: "TOKENIZER_ERROR",
+      component: "Tokenizer",
+      span: spanAt(position),
+    });
   }
 }
