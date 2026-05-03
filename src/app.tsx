@@ -194,6 +194,12 @@ function App() {
     setMessage(`Memory ${address.toString(16).toUpperCase()}H set to ${formatByte(value)}.`);
   };
 
+  const updatePort = (port: number, value: number) => {
+    machineRef.current.io.write(port, value);
+    setSnapshot(machineRef.current.snapshot());
+    setMessage(`I/O port ${formatByte(port)}H set to ${formatByte(value)}.`);
+  };
+
   return (
     <ThemeProvider defaultTheme="dark" storageKey="theme">
       <TooltipProvider>
@@ -229,6 +235,7 @@ function App() {
               onConsoleToggle={() => setConsoleOpen((open) => !open)}
               onFlagChange={updateFlag}
               onMemoryChange={updateMemory}
+              onPortChange={updatePort}
               onRegisterChange={updateRegister}
               onSourceChange={setSource}
             />

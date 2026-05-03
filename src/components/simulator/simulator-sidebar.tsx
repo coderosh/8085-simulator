@@ -1,4 +1,4 @@
-import { Cpu, Database, FileCode2 } from "lucide-react";
+import { Cable, Cpu, Database, FileCode2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -14,6 +14,7 @@ const sidebarItems = [
   { id: "editor", icon: FileCode2, label: "Editor" },
   { id: "cpu", icon: Cpu, label: "CPU" },
   { id: "memory", icon: Database, label: "Memory" },
+  { id: "io", icon: Cable, label: "I/O" },
 ] satisfies {
   id: SimulatorPanel;
   icon: typeof FileCode2;

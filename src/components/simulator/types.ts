@@ -1,1 +1,1 @@
-export type SimulatorPanel = "editor" | "cpu" | "memory";
+export type SimulatorPanel = "editor" | "cpu" | "memory" | "io";

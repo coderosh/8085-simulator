@@ -1,6 +1,7 @@
 import { AssembledPanel } from "./assembled-panel";
 import { CpuPanel } from "./cpu-panel";
 import { EditorPanel } from "./editor-panel";
+import { IOPanel } from "./io-panel";
 import { MemoryPanel } from "./memory-panel";
 import type { SimulatorPanel } from "./types";
 import type { AssembledRow } from "@/lib/simulator/assembly";
@@ -22,6 +23,7 @@ type WorkspacePanelProps = {
   onConsoleToggle: () => void;
   onFlagChange: (flag: FlagName, value: boolean) => void;
   onMemoryChange: (address: number, value: number) => void;
+  onPortChange: (port: number, value: number) => void;
   onRegisterChange: (register: string, value: number) => void;
   onSourceChange: (source: string) => void;
 };
@@ -41,6 +43,7 @@ export function WorkspacePanel({
   onConsoleToggle,
   onFlagChange,
   onMemoryChange,
+  onPortChange,
   onRegisterChange,
   onSourceChange,
 }: WorkspacePanelProps) {
@@ -58,6 +61,10 @@ export function WorkspacePanel({
 
   if (activePanel === "memory") {
     return <MemoryPanel memory={memory} onMemoryChange={onMemoryChange} />;
+  }
+
+  if (activePanel === "io") {
+    return <IOPanel ports={snapshot.io.ports} onPortChange={onPortChange} />;
   }
 
   return (
