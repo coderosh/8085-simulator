@@ -1,4 +1,5 @@
 import type {
+  CommentNode,
   LabelNode,
   OrgNode,
   ProgramNode,
@@ -10,35 +11,62 @@ import type {
 } from "@core/types";
 import { SimulatorError } from "@core/errors";
 
+export type ParserOptions = {
+  captureComments?: boolean;
+};
+
 export class Parser {
   private tokens: Token[];
   private cursor: number;
+  private comments: CommentNode[] = [];
+  private options: ParserOptions;
 
-  constructor(tokens: Token[]) {
+  constructor(tokens: Token[], options: ParserOptions = {}) {
     this.tokens = tokens;
     this.cursor = 0;
+    this.options = options;
   }
 
   parse(): ProgramNode {
-    const body = [];
+    const body: Node[] = [];
     const start = this.peek().span.start;
 
     while (!this.isAtEnd()) {
-      const node = this.parseStatement();
+      const node = this.parseStatement(body.at(-1), body.length - 1);
       if (node) body.push(node);
     }
 
-    return {
+    const lastBodyEnd = body.at(-1)?.span.end;
+    const lastCommentEnd = this.comments.at(-1)?.span.end;
+    const end =
+      lastBodyEnd && lastCommentEnd
+        ? lastBodyEnd.offset > lastCommentEnd.offset
+          ? lastBodyEnd
+          : lastCommentEnd
+        : lastBodyEnd ?? lastCommentEnd ?? this.peek().span.end;
+
+    const program: ProgramNode = {
       type: "program",
       span: {
         start,
-        end: body.at(-1)?.span.end ?? this.peek().span.end,
+        end,
       },
       body,
     };
+
+    if (this.options.captureComments) {
+      program.comments = this.comments;
+    }
+
+    return program;
   }
 
-  private parseStatement(): Node | null {
+  private parseStatement(previousNode: Node | undefined, previousNodeIndex: number): Node | null {
+    if (this.check("comment")) {
+      this.parseComment(previousNode, previousNodeIndex);
+      return null;
+    }
+
     if (this.match("identifier") && this.check("colon")) {
       return this.parseLabel();
     }
@@ -133,6 +161,30 @@ export class Parser {
       span: this.spanFrom(nameToken.span, colonToken.span),
       name: nameToken.value,
     };
+  }
+
+  private parseComment(
+    previousNode: Node | undefined,
+    previousNodeIndex: number,
+  ): void {
+    const token = this.eat("comment", "Expected comment");
+
+    if (!this.options.captureComments) {
+      return;
+    }
+
+    const isInline =
+      previousNode !== undefined &&
+      previousNode.span.end.line === token.span.start.line &&
+      previousNode.span.end.column <= token.span.start.column;
+
+    this.comments.push({
+      type: "comment",
+      span: token.span,
+      value: token.value,
+      placement: isInline ? "inline" : "ownLine",
+      ...(isInline ? { afterNodeIndex: previousNodeIndex } : {}),
+    });
   }
 
   private peek(): Token {

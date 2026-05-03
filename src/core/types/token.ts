@@ -6,6 +6,7 @@ export type TokenType =
   | "register"
   | "number"
   | "identifier"
+  | "comment"
   | "comma"
   | "colon"
   | "eof";

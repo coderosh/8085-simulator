@@ -2,10 +2,21 @@ import type { SourceSpan } from "./source";
 
 export type Node = ProgramNode | LabelNode | InstructionNode | OrgNode;
 
+export type CommentPlacement = "inline" | "ownLine";
+
 export interface ProgramNode {
   type: "program";
   span: SourceSpan;
   body: Node[];
+  comments?: CommentNode[];
+}
+
+export interface CommentNode {
+  type: "comment";
+  span: SourceSpan;
+  value: string;
+  placement: CommentPlacement;
+  afterNodeIndex?: number;
 }
 
 export interface LabelNode {

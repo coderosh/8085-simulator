@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, FileCode2, Terminal } from "lucide-react";
+import { AlignLeft, ChevronDown, ChevronUp, FileCode2, Terminal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useSimulatorStore } from "@/stores";
@@ -9,6 +9,7 @@ export function EditorPanel() {
   const activeLine = useSimulatorStore((state) => state.activeLine);
   const assemblyError = useSimulatorStore((state) => state.assemblyError);
   const consoleOpen = useSimulatorStore((state) => state.consoleOpen);
+  const formatSource = useSimulatorStore((state) => state.formatSource);
   const message = useSimulatorStore((state) => state.message);
   const source = useSimulatorStore((state) => state.source);
   const setSource = useSimulatorStore((state) => state.setSource);
@@ -22,6 +23,10 @@ export function EditorPanel() {
           main.asm
         </div>
         <div className="flex items-center gap-2">
+          <Button size="icon-sm" variant="ghost" onClick={formatSource}>
+            <AlignLeft />
+            <span className="sr-only">Format source</span>
+          </Button>
           <Button
             size="sm"
             variant={consoleOpen ? "secondary" : "ghost"}

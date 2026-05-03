@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import { assemble } from "@/core/assembler";
+import { assemble, formatProgram, Parser, Tokenizer } from "@/core/assembler";
 import { isSimulatorError } from "@/core/errors";
 import type { Machine, MachineSnapshot } from "@/core/machine";
 import type { RestartInterrupt } from "@/core/machine/components/interrupts";
@@ -50,6 +50,7 @@ type SimulatorState = {
   snapshot: MachineSnapshot;
   source: string;
   assembleProgram: (source?: string) => void;
+  formatSource: () => void;
   loadSample: (source: string) => void;
   resetProgram: () => void;
   runProgram: () => void;
@@ -113,6 +114,30 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         message: `Assembled ${nextResult.bytes.length} bytes.`,
         result: relocatedResult,
         rows,
+      });
+    } catch (error) {
+      set({
+        activePanel: "editor",
+        assemblyError: getAssemblyErrorDiagnostic(error),
+        consoleOpen: true,
+        message: getErrorMessage(error),
+      });
+    }
+  },
+  formatSource: () => {
+    const source = get().source;
+
+    try {
+      const ast = new Parser(
+        new Tokenizer(source, { captureComments: true }).getAllTokens(),
+        { captureComments: true },
+      ).parse();
+      const formattedSource = formatProgram(ast);
+
+      set({
+        assemblyError: null,
+        message: "Source formatted.",
+        source: formattedSource,
       });
     } catch (error) {
       set({

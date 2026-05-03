@@ -1,10 +1,12 @@
+import { formatProgram, Parser, Tokenizer } from "@/core/assembler";
+
 export type AssemblySample = {
   name: string;
   description: string;
   source: string;
 };
 
-export const samples: AssemblySample[] = [
+const rawSamples: AssemblySample[] = [
   {
     name: "Add and Store",
     description: "Move values, add, increment, and store.",
@@ -144,3 +146,17 @@ IDLE: MVI B, 00H
 DONE: HLT`,
   },
 ];
+
+export const samples: AssemblySample[] = rawSamples.map((sample) => ({
+  ...sample,
+  source: formatSampleSource(sample.source),
+}));
+
+function formatSampleSource(source: string): string {
+  return formatProgram(
+    new Parser(
+      new Tokenizer(source, { captureComments: true }).getAllTokens(),
+      { captureComments: true },
+    ).parse(),
+  );
+}

@@ -4,14 +4,20 @@ import type { SourcePosition, Token, TokenType } from "@core/types";
 
 const DIRECTIVES = new Set(["ORG"]);
 
+export type TokenizerOptions = {
+  captureComments?: boolean;
+};
+
 export class Tokenizer {
   private cursor = 0;
   private line = 1;
   private column = 1;
   private input: string;
+  private options: TokenizerOptions;
 
-  constructor(input: string) {
+  constructor(input: string, options: TokenizerOptions = {}) {
     this.input = input;
+    this.options = options;
   }
 
   getAllTokens(): Token[] {
@@ -32,6 +38,10 @@ export class Tokenizer {
 
     if (this.isEOF()) {
       return this.makeToken("eof", "", this.currentPosition());
+    }
+
+    if (this.peek() === ";") {
+      return this.readComment();
     }
 
     if (this.peek() === ",") {
@@ -160,7 +170,7 @@ export class Tokenizer {
         continue;
       }
 
-      if (this.peek() === ";") {
+      if (!this.options.captureComments && this.peek() === ";") {
         this.skipComment();
         continue;
       }
@@ -179,6 +189,17 @@ export class Tokenizer {
     while (!this.isEOF() && !this.isLineBreak(this.peek())) {
       this.advance();
     }
+  }
+
+  private readComment(): Token {
+    const start = this.currentPosition();
+    let comment = "";
+
+    while (!this.isEOF() && !this.isLineBreak(this.peek())) {
+      comment += this.advance();
+    }
+
+    return this.makeToken("comment", comment, start);
   }
 
   private isWhitespace(char: string): boolean {
