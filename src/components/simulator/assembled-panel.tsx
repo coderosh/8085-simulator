@@ -14,7 +14,7 @@ export const AssembledPanel = memo(function AssembledPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-[3.25rem] shrink-0 items-center justify-between gap-3 border-b px-5">
+      <div className="flex h-[3.25rem] shrink-0 items-center justify-between gap-3 border-b px-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-2">
           <Braces />
           <h2 className="truncate font-serif text-lg font-semibold">
@@ -26,12 +26,12 @@ export const AssembledPanel = memo(function AssembledPanel() {
         </div>
       </div>
       <ScrollArea className="min-h-0 flex-1">
-        <div className="p-5">
+        <div className="p-3 sm:p-5">
           {rows.map((row) => (
             <div
               key={`${row.address}-${row.line}`}
               className={cn(
-                "grid grid-cols-[3.75rem_6rem_minmax(0,1fr)] items-center border-b px-1 py-3 font-mono text-sm",
+                "grid grid-cols-[3.5rem_5rem_minmax(0,1fr)] items-center border-b px-1 py-3 font-mono text-xs sm:grid-cols-[3.75rem_6rem_minmax(0,1fr)] sm:text-sm",
                 activeAddress >= row.address &&
                   activeAddress < row.address + row.bytes.length &&
                   "bg-primary/10 text-primary",

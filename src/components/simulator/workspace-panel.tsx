@@ -24,7 +24,7 @@ export const WorkspacePanel = memo(function WorkspacePanel() {
   }
 
   return (
-    <section className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_12rem] lg:grid-rows-[minmax(0,1fr)]">
+    <section className="grid h-full min-h-0 grid-rows-[minmax(0,1fr)_10rem] sm:grid-rows-[minmax(0,1fr)_12rem] lg:grid-rows-[minmax(0,1fr)]">
       <EditorPanel />
       <section className="min-h-0 border-t bg-background lg:hidden">
         <AssembledPanel />

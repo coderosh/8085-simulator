@@ -12,10 +12,12 @@ function App() {
         <main className="flex h-dvh overflow-hidden flex-col bg-background text-foreground">
           <AppHeader />
 
-          <div className="grid min-h-0 flex-1 grid-cols-[4.75rem_minmax(0,1fr)] lg:grid-cols-[4.75rem_minmax(0,1fr)_25rem]">
+          <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(0,1fr)_4.5rem] md:grid-cols-[4.75rem_minmax(0,1fr)] md:grid-rows-1 lg:grid-cols-[4.75rem_minmax(0,1fr)_25rem]">
             <SimulatorSidebar />
 
-            <WorkspacePanel />
+            <div className="min-h-0 md:order-none">
+              <WorkspacePanel />
+            </div>
 
             <aside className="hidden min-h-0 border-l bg-background lg:block">
               <AssembledPanel />

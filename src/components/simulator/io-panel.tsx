@@ -38,8 +38,8 @@ export function IOPanel() {
   });
 
   return (
-    <section className="grid min-h-0 grid-rows-[3.25rem_minmax(0,1fr)] bg-card">
-      <div className="flex items-center justify-between border-b px-5">
+    <section className="grid h-full min-h-0 grid-rows-[3.25rem_minmax(0,1fr)] bg-card">
+      <div className="flex items-center justify-between gap-3 border-b px-3 sm:px-5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Cable />
           I/O Ports
@@ -49,8 +49,32 @@ export function IOPanel() {
         </div>
       </div>
       <ScrollArea className="min-h-0">
-        <div className="p-5">
-          <Table className="min-w-[56rem] table-fixed border font-mono">
+        <div className="p-3 sm:p-5">
+          <div className="grid gap-3 md:hidden">
+            {rows.map((row) => (
+              <section key={row.port} className="overflow-hidden rounded-md border">
+                <div className="border-b bg-muted/20 px-3 py-2 font-mono text-sm font-semibold text-muted-foreground">
+                  {formatByte(row.port)}H
+                </div>
+                <div className="grid grid-cols-4">
+                  {row.ports.map((port) => (
+                    <div key={port.port} className="border-r border-b last:border-r-0 [&:nth-child(4n)]:border-r-0 [&:nth-last-child(-n+4)]:border-b-0">
+                      <div className="border-b bg-muted/20 py-1 text-center font-mono text-[0.625rem] text-muted-foreground">
+                        +{(port.port & 0xf).toString(16).toUpperCase()}
+                      </div>
+                      <MemoryCellInput
+                        ariaLabel={`I/O port ${formatByte(port.port)}`}
+                        value={port.value}
+                        onCommit={(value) => updatePort(port.port, value)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+
+          <Table className="hidden table-fixed border font-mono md:table">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead className="w-24 border-r text-center text-muted-foreground">

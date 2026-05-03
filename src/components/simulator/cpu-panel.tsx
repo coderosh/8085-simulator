@@ -127,8 +127,8 @@ export const CpuPanel = memo(function CpuPanel() {
   );
 
   return (
-    <section className="grid min-h-0 grid-rows-[3.25rem_minmax(0,1fr)] bg-card">
-      <div className="flex items-center justify-between border-b px-5">
+    <section className="grid h-full min-h-0 grid-rows-[3.25rem_minmax(0,1fr)] bg-card">
+      <div className="flex items-center justify-between border-b px-3 sm:px-5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <Cpu />
           CPU State
@@ -138,7 +138,7 @@ export const CpuPanel = memo(function CpuPanel() {
         </Badge>
       </div>
       <div className="min-h-0 overflow-auto">
-        <div className="flex flex-col gap-4 p-5">
+        <div className="flex flex-col gap-4 p-3 sm:p-5">
           <div className="grid gap-3 xl:grid-cols-[minmax(8rem,0.7fr)_minmax(0,2fr)]">
             <div className="rounded-md border bg-background p-3">
               <div className="mb-2 text-xs font-medium text-muted-foreground">
@@ -312,7 +312,7 @@ const PointerRow = memo(function PointerRow({
   );
 
   return (
-    <div className="grid min-h-12 grid-cols-[3rem_minmax(0,1fr)_4.5rem] items-center gap-3 rounded-md border bg-card px-3 py-2">
+    <div className="grid min-h-12 grid-cols-[2.5rem_minmax(0,1fr)_4rem] items-center gap-2 rounded-md border bg-card px-3 py-2 sm:grid-cols-[3rem_minmax(0,1fr)_4.5rem] sm:gap-3">
       <div className="font-mono text-sm text-muted-foreground">{label}</div>
       {editable ? (
         <HexInput

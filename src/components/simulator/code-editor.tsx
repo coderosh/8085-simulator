@@ -63,7 +63,7 @@ const simulatorEditorTheme = EditorView.theme({
     backgroundColor: "var(--card)",
   },
   ".cm-content": {
-    padding: "1.25rem 1.5rem",
+    padding: "1rem",
     caretColor: "var(--primary)",
   },
   ".cm-gutters": {

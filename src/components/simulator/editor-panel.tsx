@@ -15,7 +15,7 @@ export function EditorPanel() {
 
   return (
     <section className="grid h-full min-h-0 grid-rows-[3.25rem_minmax(0,1fr)_auto] bg-card">
-      <div className="flex items-center justify-between border-b px-5">
+      <div className="flex items-center justify-between border-b px-3 sm:px-5">
         <div className="flex items-center gap-2 text-sm font-medium">
           <FileCode2 />
           main.asm
@@ -47,13 +47,13 @@ export function EditorPanel() {
       </div>
       {consoleOpen ? (
         <div className="h-32 border-t bg-background">
-          <div className="flex h-10 items-center justify-between border-b px-5">
+          <div className="flex h-10 items-center justify-between border-b px-3 sm:px-5">
             <div className="flex items-center gap-2 text-sm font-medium">
               <Terminal />
               Console
             </div>
           </div>
-          <div className="h-[calc(8rem-2.5rem)] overflow-auto px-5 py-3 font-mono text-sm text-muted-foreground">
+          <div className="h-[calc(8rem-2.5rem)] overflow-auto px-3 py-3 font-mono text-sm text-muted-foreground sm:px-5">
             {message}
           </div>
         </div>

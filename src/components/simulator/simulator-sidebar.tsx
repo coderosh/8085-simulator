@@ -28,7 +28,7 @@ export const SimulatorSidebar = memo(function SimulatorSidebar() {
   const setActivePanel = useSimulatorStore((state) => state.setActivePanel);
 
   return (
-    <aside className="flex flex-col items-center gap-4 border-r bg-sidebar py-5 text-sidebar-foreground">
+    <aside className="order-2 flex items-center justify-around gap-2 border-t bg-sidebar px-3 py-2 text-sidebar-foreground md:order-none md:flex-col md:justify-start md:border-r md:border-t-0 md:px-0 md:py-5">
       {sidebarItems.map((item) => {
         const isActive = item.id === activePanel;
 

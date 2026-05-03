@@ -45,8 +45,8 @@ export const AppHeader = memo(function AppHeader() {
   );
 
   return (
-    <header className="flex h-16 shrink-0 items-center border-b bg-card px-4">
-      <div className="flex min-w-0 flex-1 items-center gap-4">
+    <header className="flex min-h-16 shrink-0 flex-wrap items-center gap-3 border-b bg-card px-3 py-3 sm:px-4">
+      <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
         <div className="flex items-center gap-3">
           <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <Cpu />
@@ -57,8 +57,9 @@ export const AppHeader = memo(function AppHeader() {
         <DropdownMenu>
           <DropdownMenuTrigger
             render={
-              <Button variant="outline" className="min-w-44 justify-between">
-                Load Samples
+              <Button variant="outline" className="min-w-0 justify-between sm:min-w-44">
+                <span className="sm:hidden">Samples</span>
+                <span className="hidden sm:inline">Load Samples</span>
                 <FolderOpen data-icon="inline-end" />
               </Button>
             }
@@ -79,7 +80,7 @@ export const AppHeader = memo(function AppHeader() {
         </DropdownMenu>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-1 sm:gap-2">
         <Tooltip>
           <TooltipTrigger
             render={
