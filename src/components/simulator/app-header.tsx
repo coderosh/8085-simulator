@@ -31,7 +31,9 @@ import { samples } from "@/lib/simulator/samples";
 import { useSimulatorStore } from "@/stores";
 
 export const AppHeader = memo(function AppHeader() {
-  const executionFinished = useSimulatorStore((state) => state.executionFinished);
+  const executionFinished = useSimulatorStore(
+    (state) => state.executionFinished,
+  );
   const assembleProgram = useSimulatorStore((state) => state.assembleProgram);
   const resetProgram = useSimulatorStore((state) => state.resetProgram);
   const runProgram = useSimulatorStore((state) => state.runProgram);
@@ -49,7 +51,7 @@ export const AppHeader = memo(function AppHeader() {
           <div className="flex size-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <Cpu />
           </div>
-          <h1 className="font-serif text-2xl font-semibold italic">8085 SIM</h1>
+          <h1 className="font-serif text-2xl font-semibold italic">8085</h1>
         </div>
         <Separator orientation="vertical" className="hidden sm:block" />
         <DropdownMenu>
@@ -81,7 +83,11 @@ export const AppHeader = memo(function AppHeader() {
         <Tooltip>
           <TooltipTrigger
             render={
-              <Button size="icon" variant="ghost" onClick={assembleCurrentSource}>
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={assembleCurrentSource}
+              >
                 <Braces />
                 <span className="sr-only">Assemble</span>
               </Button>
