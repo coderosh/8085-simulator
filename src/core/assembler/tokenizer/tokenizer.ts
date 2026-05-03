@@ -1,6 +1,8 @@
 import { MNEMONICS, REGISTERS } from "@core/constants";
 import type { SourcePosition, Token, TokenType } from "@core/types";
 
+const DIRECTIVES = new Set(["ORG"]);
+
 export class Tokenizer {
   private cursor = 0;
   private line = 1;
@@ -137,6 +139,10 @@ export class Tokenizer {
 
     if (REGISTERS.has(upper)) {
       return this.makeToken("register", upper, start);
+    }
+
+    if (DIRECTIVES.has(upper)) {
+      return this.makeToken("directive", upper, start);
     }
 
     if (MNEMONICS.has(upper)) {

@@ -134,4 +134,33 @@ HLT`);
     expect(machine.registers.pc).toBe(result.bytes.length);
     expect(machine.controlUnit.isHalted()).toBe(true);
   });
+
+  it("executes CALL and RET with an ORG-based absolute subroutine address", () => {
+    const result = assemble(`ORG 2000H
+LXI SP, 0FFF0H
+MVI A, 01H
+CALL INC_A
+HLT
+ORG 2010H
+INC_A: INR A
+RET`);
+    const machine = new Machine();
+
+    for (const segment of result.segments) {
+      machine.memory.load(segment.bytes, segment.startAddress);
+    }
+
+    machine.registers.pc = result.entryPoint;
+
+    for (let steps = 0; steps < 10; steps++) {
+      const step = machine.step();
+
+      if (step.opcode === 0x76) break;
+    }
+
+    expect(result.bytes.slice(5, 8)).toEqual([0xcd, 0x10, 0x20]);
+    expect(machine.registers.a).toBe(0x02);
+    expect(machine.registers.pc).toBe(0x2009);
+    expect(machine.controlUnit.isHalted()).toBe(true);
+  });
 });

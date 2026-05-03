@@ -3,7 +3,6 @@ import { Braces } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { AssembledRow } from "@/lib/simulator/assembly";
-import { BASE_ADDRESS } from "@/lib/simulator/constants";
 import { formatByte, formatWord } from "@/lib/simulator/format";
 import { cn } from "@/lib/utils";
 
@@ -18,7 +17,7 @@ export function AssembledPanel({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-14 shrink-0 items-center justify-between gap-3 border-b px-5">
+      <div className="flex h-[3.25rem] shrink-0 items-center justify-between gap-3 border-b px-5">
         <div className="flex min-w-0 items-center gap-2">
           <Braces />
           <h2 className="truncate font-serif text-lg font-semibold">
@@ -27,7 +26,6 @@ export function AssembledPanel({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Badge variant="secondary">{byteCount} bytes</Badge>
-          <Badge variant="outline">ORG {formatWord(BASE_ADDRESS)}H</Badge>
         </div>
       </div>
       <ScrollArea className="min-h-0 flex-1">

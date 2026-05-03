@@ -14,6 +14,7 @@ import type { CodeGenResult } from "@/core/types";
 import {
   buildAssembledRows,
   createLoadedMachine,
+  hasProgramByte,
   relocateAssembledResult,
 } from "@/lib/simulator/assembly";
 import { BASE_ADDRESS } from "@/lib/simulator/constants";
@@ -29,8 +30,8 @@ function App() {
     [],
   );
   const initialMachine = useMemo(
-    () => createLoadedMachine(initialResult.bytes),
-    [initialResult.bytes],
+    () => createLoadedMachine(initialResult),
+    [initialResult],
   );
   const [activePanel, setActivePanel] = useState<SimulatorPanel>("editor");
   const [source, setSource] = useState(samples[0].source);
@@ -59,13 +60,13 @@ function App() {
     try {
       const nextResult = assemble(nextSource);
       const relocatedResult = relocateAssembledResult(nextResult);
-      const nextMachine = createLoadedMachine(relocatedResult.bytes);
+      const nextMachine = createLoadedMachine(relocatedResult);
 
       setResult(relocatedResult);
       setAssembledSource(nextSource);
       machineRef.current = nextMachine;
       setSnapshot(nextMachine.snapshot());
-      setActiveAddress(BASE_ADDRESS);
+      setActiveAddress(relocatedResult.entryPoint);
       setLastOpcode(null);
       setMessage(`Assembled ${nextResult.bytes.length} bytes.`);
     } catch (error) {
@@ -134,7 +135,7 @@ function App() {
         steps++;
 
         if (opcode === hltOpcode) break;
-        if (machineRef.current.registers.pc >= BASE_ADDRESS + result.bytes.length) break;
+        if (!hasProgramByte(result, machineRef.current.registers.pc)) break;
       }
 
       const nextSnapshot = machineRef.current.snapshot();
@@ -155,11 +156,11 @@ function App() {
   };
 
   const resetProgram = () => {
-    const nextMachine = createLoadedMachine(result.bytes);
+    const nextMachine = createLoadedMachine(result);
 
     machineRef.current = nextMachine;
     setSnapshot(nextMachine.snapshot());
-    setActiveAddress(BASE_ADDRESS);
+    setActiveAddress(result.entryPoint);
     setLastOpcode(null);
     setMessage("Machine reset with the current bytes.");
   };
@@ -203,7 +204,7 @@ function App() {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="theme">
       <TooltipProvider>
-        <main className="flex min-h-screen flex-col bg-background text-foreground">
+        <main className="flex h-dvh overflow-hidden flex-col bg-background text-foreground">
           <AppHeader
             executionFinished={executionFinished}
             samples={samples}

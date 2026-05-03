@@ -1,6 +1,6 @@
 import type { SourceSpan } from "./source";
 
-export type Node = ProgramNode | LabelNode | InstructionNode;
+export type Node = ProgramNode | LabelNode | InstructionNode | OrgNode;
 
 export interface ProgramNode {
   type: "program";
@@ -19,6 +19,12 @@ export interface InstructionNode {
   span: SourceSpan;
   mnemonic: string;
   operands: Operand[];
+}
+
+export interface OrgNode {
+  type: "org";
+  span: SourceSpan;
+  address: number;
 }
 
 export type Operand =

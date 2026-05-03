@@ -1,9 +1,11 @@
 import {
   type CodeGenResult,
+  type CodeGenSegment,
   type CodeGenSourceMapEntry,
   type InstructionDefinition,
   type InstructionNode,
   type LabelNode,
+  type OrgNode,
   type Operand,
   type OperandKind,
   type ProgramNode,
@@ -20,6 +22,9 @@ import { getInstructionSize } from "@core/utils";
 export class CodeGen {
   program: ProgramNode;
   bytes: number[] = [];
+  entryPoint = 0;
+  hasExplicitOrigin = false;
+  segments: CodeGenSegment[] = [];
   symbols: Record<string, number> = {};
   sourceMap: CodeGenSourceMapEntry[] = [];
   address = 0;
@@ -31,10 +36,16 @@ export class CodeGen {
   generate(): CodeGenResult {
     this.collectSymbols(this.program);
     this.bytes = [];
+    this.segments = [];
     this.sourceMap = [];
     this.address = 0;
 
     for (const node of this.program.body) {
+      if (node.type === "org") {
+        this.address = node.address;
+        continue;
+      }
+
       if (node.type !== "instruction") continue;
 
       this.emitInstruction(node);
@@ -42,6 +53,9 @@ export class CodeGen {
 
     return {
       bytes: this.bytes,
+      entryPoint: this.entryPoint,
+      hasExplicitOrigin: this.hasExplicitOrigin,
+      segments: this.segments,
       symbols: this.symbols,
       sourceMap: this.sourceMap,
     };
@@ -50,8 +64,23 @@ export class CodeGen {
   private collectSymbols(node: ProgramNode): void {
     this.symbols = {};
     this.address = 0;
+    this.entryPoint = 0;
+    this.hasExplicitOrigin = false;
+    let hasInstruction = false;
 
     for (const statement of node.body) {
+      if (statement.type === "org") {
+        this.validateAddress(statement.address, statement);
+        this.address = statement.address;
+
+        if (!this.hasExplicitOrigin) {
+          this.entryPoint = statement.address;
+          this.hasExplicitOrigin = true;
+        }
+
+        continue;
+      }
+
       if (statement.type === "label") {
         if (this.symbols[statement.name] !== undefined) {
           throw this.error(`Duplicate label '${statement.name}'`, statement);
@@ -61,6 +90,11 @@ export class CodeGen {
       }
 
       if (statement.type === "instruction") {
+        if (!hasInstruction) {
+          this.entryPoint = this.address;
+          hasInstruction = true;
+        }
+
         this.address += getInstructionSize(statement);
       }
     }
@@ -93,6 +127,7 @@ export class CodeGen {
   private emitBytes(bytes: number[], node: InstructionNode): void {
     for (const byte of bytes) {
       this.bytes.push(byte);
+      this.currentSegment().bytes.push(byte);
       this.sourceMap.push({
         address: this.address,
         byte,
@@ -100,6 +135,25 @@ export class CodeGen {
       });
       this.address++;
     }
+  }
+
+  private currentSegment(): CodeGenSegment {
+    const lastSegment = this.segments.at(-1);
+    const nextAddress = lastSegment
+      ? lastSegment.startAddress + lastSegment.bytes.length
+      : undefined;
+
+    if (lastSegment && nextAddress === this.address) {
+      return lastSegment;
+    }
+
+    const segment = {
+      startAddress: this.address,
+      bytes: [],
+    };
+
+    this.segments.push(segment);
+    return segment;
   }
 
   private resolveOperands(
@@ -284,13 +338,19 @@ export class CodeGen {
     }
   }
 
+  private validateAddress(value: number, node: OrgNode): void {
+    if (value < 0 || value > 0xffff) {
+      throw this.error(`ORG address ${value} is out of range (0 - 65535)`, node);
+    }
+  }
+
   private operandError(message: string, operand: Operand): Error {
     return new Error(
       `[CodeGen Error] ${message} at line ${operand.span.start.line}, col ${operand.span.start.column}`,
     );
   }
 
-  private error(message: string, node: InstructionNode | LabelNode): Error {
+  private error(message: string, node: InstructionNode | LabelNode | OrgNode): Error {
     return new Error(
       `[CodeGen Error] ${message} at line ${node.span.start.line}, col ${node.span.start.column}`,
     );

@@ -34,7 +34,7 @@ export function buildAssembledRows(
     }
 
     rows.set(line, {
-      address: BASE_ADDRESS + entry.address,
+      address: entry.address,
       bytes: [entry.byte],
       source: sourceLines[line - 1]?.trim() ?? "",
       line,
@@ -48,26 +48,51 @@ export function relocateAssembledResult(
   result: CodeGenResult,
   startAddress = BASE_ADDRESS,
 ): CodeGenResult {
-  const bytes = relocateAddressOperands(result.bytes, startAddress);
+  if (result.hasExplicitOrigin) {
+    return result;
+  }
+
+  const segments = result.segments.map((segment) => ({
+    startAddress: (segment.startAddress + startAddress) & 0xffff,
+    bytes: relocateAddressOperands(segment.bytes, startAddress),
+  }));
+  const bytes = segments.flatMap((segment) => segment.bytes);
 
   return {
     ...result,
     bytes,
-    sourceMap: result.sourceMap.map((entry) => ({
+    entryPoint: (result.entryPoint + startAddress) & 0xffff,
+    segments,
+    symbols: Object.fromEntries(
+      Object.entries(result.symbols).map(([name, address]) => [
+        name,
+        (address + startAddress) & 0xffff,
+      ]),
+    ),
+    sourceMap: result.sourceMap.map((entry, index) => ({
       ...entry,
-      byte: bytes[entry.address],
+      address: (entry.address + startAddress) & 0xffff,
+      byte: bytes[index],
     })),
   };
 }
 
-export function createLoadedMachine(bytes: number[]) {
+export function createLoadedMachine(result: CodeGenResult) {
   const machine = new Machine();
 
   window.machine = machine;
 
-  machine.loadProgram(bytes, BASE_ADDRESS);
+  for (const segment of result.segments) {
+    machine.memory.load(segment.bytes, segment.startAddress);
+  }
+
+  machine.registers.pc = result.entryPoint & 0xffff;
 
   return machine;
+}
+
+export function hasProgramByte(result: CodeGenResult, address: number): boolean {
+  return result.sourceMap.some((entry) => entry.address === (address & 0xffff));
 }
 
 function relocateAddressOperands(

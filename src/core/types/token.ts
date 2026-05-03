@@ -1,6 +1,7 @@
 import type { SourceSpan } from "./source";
 
 export type TokenType =
+  | "directive"
   | "mnemonic"
   | "register"
   | "number"

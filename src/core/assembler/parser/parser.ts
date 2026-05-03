@@ -1,5 +1,6 @@
 import type {
   LabelNode,
+  OrgNode,
   ProgramNode,
   Node,
   InstructionNode,
@@ -45,7 +46,31 @@ export class Parser {
       return this.parseInstruction();
     }
 
-    throw this.error("Unexpected token, expected label or instruction");
+    if (this.check("directive")) {
+      return this.parseDirective();
+    }
+
+    throw this.error("Unexpected token, expected label, instruction, or directive");
+  }
+
+  private parseDirective(): OrgNode {
+    const directiveToken = this.eat("directive", "Expected assembler directive");
+
+    if (directiveToken.value !== "ORG") {
+      throw this.error(`Unsupported directive '${directiveToken.value}'`);
+    }
+
+    const address = this.parseOperand();
+
+    if (address.type !== "number") {
+      throw this.error("ORG expects a numeric address");
+    }
+
+    return {
+      type: "org",
+      span: this.spanFrom(directiveToken.span, address.span),
+      address: address.value,
+    };
   }
 
   private parseInstruction(): InstructionNode {
