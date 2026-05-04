@@ -8,6 +8,7 @@ import type { InterruptSnapshot } from "@/core/machine/components/interrupts";
 import type { RegistersSnapshot } from "@/core/machine/components/registers";
 import type { FlagName } from "@/core/machine/components/registers";
 import type { CodeGenResult } from "@/core/types";
+import type { ProgramNode } from "@/core/types";
 import type { SourceSpan } from "@/core/types";
 import {
   buildAssembledRows,
@@ -29,16 +30,23 @@ const initialSource = samples[0].source;
 const initialResult = relocateAssembledResult(assemble(initialSource));
 const initialMachine = createLoadedMachine(initialResult);
 const initialRows = buildAssembledRows(initialResult, initialSource);
+const initialAstState = parseAst(initialSource);
+
+export type OutputExplorerTab = "assembled" | "ast";
 
 type SimulatorState = {
   activeAddress: number;
   activeLine?: number;
   assemblyError: AssemblyErrorDiagnostic | null;
+  ast: ProgramNode | null;
+  astError: string | null;
+  astHoverSpan: SourceSpan | null;
   activePanel: SimulatorPanel;
   assembledSource: string;
   consoleOpen: boolean;
   executionFinished: boolean;
   interrupts: InterruptSnapshot;
+  outputExplorerTab: OutputExplorerTab;
   lastOpcode: number | null;
   machine: Machine;
   memory: Uint8Array;
@@ -54,7 +62,9 @@ type SimulatorState = {
   loadSample: (source: string) => void;
   resetProgram: () => void;
   runProgram: () => void;
+  setAstHoverSpan: (span: SourceSpan | null) => void;
   setActivePanel: (panel: SimulatorPanel) => void;
+  setOutputExplorerTab: (tab: OutputExplorerTab) => void;
   setSource: (source: string) => void;
   stepProgram: () => void;
   toggleConsole: () => void;
@@ -78,6 +88,9 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   activeAddress: BASE_ADDRESS,
   activeLine: getActiveLine(initialRows, BASE_ADDRESS),
   assemblyError: null,
+  ast: initialAstState.ast,
+  astError: initialAstState.error,
+  astHoverSpan: null,
   activePanel: "editor",
   assembledSource: initialSource,
   consoleOpen: false,
@@ -87,6 +100,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   machine: initialMachine,
   memory: initialMachine.memory.snapshot().data,
   message: "Program assembled and loaded.",
+  outputExplorerTab: "assembled",
   ports: initialMachine.io.snapshot().ports,
   registers: initialMachine.registers.snapshot(),
   result: initialResult,
@@ -98,6 +112,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
     try {
       const nextResult = assemble(source);
+      const nextAstState = parseAst(source);
       const relocatedResult = relocateAssembledResult(nextResult);
       const nextMachine = createLoadedMachine(relocatedResult);
       const rows = buildAssembledRows(relocatedResult, source);
@@ -107,6 +122,9 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         activeAddress,
         activeLine: getActiveLine(rows, activeAddress),
         assemblyError: null,
+        ast: nextAstState.ast,
+        astError: nextAstState.error,
+        astHoverSpan: null,
         assembledSource: source,
         lastOpcode: null,
         machine: nextMachine,
@@ -133,9 +151,13 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         { captureComments: true },
       ).parse();
       const formattedSource = formatProgram(ast);
+      const formattedAstState = parseAst(formattedSource);
 
       set({
         assemblyError: null,
+        ast: formattedAstState.ast,
+        astError: formattedAstState.error,
+        astHoverSpan: null,
         message: "Source formatted.",
         source: formattedSource,
       });
@@ -149,9 +171,14 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     }
   },
   loadSample: (source) => {
+    const nextAstState = parseAst(source);
+
     set({
       activePanel: "editor",
       assemblyError: null,
+      ast: nextAstState.ast,
+      astError: nextAstState.error,
+      astHoverSpan: null,
       consoleOpen: false,
       message: "Sample loaded into editor.",
       source,
@@ -213,12 +240,30 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       });
     }
   },
+  setAstHoverSpan: (astHoverSpan) =>
+    set((state) => (state.astHoverSpan === astHoverSpan ? state : { astHoverSpan })),
   setActivePanel: (activePanel) =>
     set((state) => (state.activePanel === activePanel ? state : { activePanel })),
-  setSource: (source) =>
+  setOutputExplorerTab: (outputExplorerTab) =>
     set((state) =>
-      state.source === source ? state : { assemblyError: null, source },
+      state.outputExplorerTab === outputExplorerTab
+        ? state
+        : { outputExplorerTab },
     ),
+  setSource: (source) =>
+    set((state) => {
+      if (state.source === source) return state;
+
+      const nextAstState = parseAst(source);
+
+      return {
+        assemblyError: null,
+        ast: nextAstState.ast,
+        astError: nextAstState.error,
+        astHoverSpan: null,
+        source,
+      };
+    }),
   stepProgram: () => {
     const { machine } = get();
 
@@ -385,6 +430,23 @@ function getAssemblyErrorDiagnostic(error: unknown): AssemblyErrorDiagnostic | n
     severity: error.severity,
     span: error.span,
   };
+}
+
+function parseAst(source: string) {
+  try {
+    return {
+      ast: new Parser(
+        new Tokenizer(source, { captureComments: true }).getAllTokens(),
+        { captureComments: true },
+      ).parse(),
+      error: null,
+    };
+  } catch (error) {
+    return {
+      ast: null,
+      error: getErrorMessage(error),
+    };
+  }
 }
 
 function formatInterruptName(interrupt: RestartInterrupt): string {

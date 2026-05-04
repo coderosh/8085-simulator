@@ -14,10 +14,12 @@ import {
 } from "@codemirror/state";
 
 import { assemblyEditorExtensions } from "@/lib/simulator/assembly-language";
+import type { SourceSpan } from "@/core/types";
 import type { AssemblyErrorDiagnostic } from "@/stores/simulator-store";
 
 const setHighlightedLine = StateEffect.define<number | undefined>();
 const setDiagnostic = StateEffect.define<AssemblyErrorDiagnostic | null>();
+const setHoveredSpan = StateEffect.define<SourceSpan | null>();
 
 const highlightedLineField = StateField.define<DecorationSet>({
   create() {
@@ -123,6 +125,22 @@ const diagnosticTooltip = hoverTooltip((view, position) => {
   };
 });
 
+const hoveredSpanField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none;
+  },
+  update(highlights, transaction) {
+    for (const effect of transaction.effects) {
+      if (!effect.is(setHoveredSpan)) continue;
+
+      return buildHoveredSpanDecorations(transaction.state, effect.value);
+    }
+
+    return highlights.map(transaction.changes);
+  },
+  provide: (field) => EditorView.decorations.from(field),
+});
+
 const simulatorEditorTheme = EditorView.theme({
   "&": {
     height: "100%",
@@ -169,6 +187,12 @@ const simulatorEditorTheme = EditorView.theme({
   },
   ".cm-assembly-error-line": {
     backgroundColor: "color-mix(in oklab, var(--destructive) 12%, transparent)",
+  },
+  ".cm-ast-hover-range": {
+    backgroundColor: "color-mix(in oklab, var(--accent) 34%, transparent)",
+    borderBottom: "1px solid color-mix(in oklab, var(--accent) 62%, transparent)",
+    borderRadius: "0.28rem",
+    boxShadow: "0 0 0 1px color-mix(in oklab, var(--accent) 28%, transparent)",
   },
   ".cm-assembly-error-range": {
     cursor: "help",
@@ -239,6 +263,7 @@ const simulatorEditorTheme = EditorView.theme({
 type CodeEditorProps = {
   activeLine?: number;
   diagnostic?: AssemblyErrorDiagnostic | null;
+  hoveredSpan?: SourceSpan | null;
   value: string;
   onChange: (value: string) => void;
 };
@@ -246,6 +271,7 @@ type CodeEditorProps = {
 export function CodeEditor({
   activeLine,
   diagnostic = null,
+  hoveredSpan = null,
   value,
   onChange,
 }: CodeEditorProps) {
@@ -256,6 +282,7 @@ export function CodeEditor({
       diagnosticStateField,
       diagnosticField,
       diagnosticTooltip,
+      hoveredSpanField,
       ...assemblyEditorExtensions(),
     ],
     [],
@@ -272,6 +299,12 @@ export function CodeEditor({
       effects: setDiagnostic.of(diagnostic),
     });
   }, [diagnostic]);
+
+  useEffect(() => {
+    editorRef.current?.dispatch({
+      effects: setHoveredSpan.of(hoveredSpan),
+    });
+  }, [hoveredSpan]);
 
   return (
     <CodeMirror
@@ -292,6 +325,7 @@ export function CodeEditor({
           effects: [
             setHighlightedLine.of(activeLine),
             setDiagnostic.of(diagnostic),
+            setHoveredSpan.of(hoveredSpan),
           ],
         });
       }}
@@ -336,9 +370,37 @@ function getDiagnosticRange(
   viewState: EditorState,
   diagnostic: AssemblyErrorDiagnostic,
 ) {
+  return getSpanRange(viewState, diagnostic.span);
+}
+
+function buildHoveredSpanDecorations(
+  viewState: EditorState,
+  hoveredSpan: SourceSpan | null,
+): DecorationSet {
+  if (!hoveredSpan) {
+    return Decoration.none;
+  }
+
+  const builder = new RangeSetBuilder<Decoration>();
+  const { from, to } = getSpanRange(viewState, hoveredSpan);
+
+  if (to > from) {
+    builder.add(
+      from,
+      to,
+      Decoration.mark({
+        class: "cm-ast-hover-range",
+      }),
+    );
+  }
+
+  return builder.finish();
+}
+
+function getSpanRange(viewState: EditorState, span: SourceSpan) {
   const docLength = viewState.doc.length;
-  const from = Math.max(0, Math.min(diagnostic.span.start.offset, docLength));
-  const rawTo = Math.max(from, Math.min(diagnostic.span.end.offset, docLength));
+  const from = Math.max(0, Math.min(span.start.offset, docLength));
+  const rawTo = Math.max(from, Math.min(span.end.offset, docLength));
   const to = rawTo === from ? Math.min(from + 1, docLength) : rawTo;
 
   return { from, to };

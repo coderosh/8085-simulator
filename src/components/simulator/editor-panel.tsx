@@ -8,6 +8,7 @@ import { CodeEditor } from "./code-editor";
 export function EditorPanel() {
   const activeLine = useSimulatorStore((state) => state.activeLine);
   const assemblyError = useSimulatorStore((state) => state.assemblyError);
+  const astHoverSpan = useSimulatorStore((state) => state.astHoverSpan);
   const consoleOpen = useSimulatorStore((state) => state.consoleOpen);
   const formatSource = useSimulatorStore((state) => state.formatSource);
   const message = useSimulatorStore((state) => state.message);
@@ -48,6 +49,7 @@ export function EditorPanel() {
         <CodeEditor
           activeLine={activeLine}
           diagnostic={assemblyError}
+          hoveredSpan={astHoverSpan}
           value={source}
           onChange={setSource}
         />
