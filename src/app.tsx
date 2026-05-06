@@ -1,11 +1,23 @@
+import { useEffect } from "react";
+
 import { ThemeProvider } from "@/components/theme-provider";
 import { AppHeader } from "@/components/simulator/app-header";
 import { AssembledPanel } from "@/components/simulator/assembled-panel";
 import { SimulatorSidebar } from "@/components/simulator/simulator-sidebar";
 import { WorkspacePanel } from "@/components/simulator/workspace-panel";
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useSimulatorStore } from "@/stores";
 
 function App() {
+  const initializeWorkspace = useSimulatorStore(
+    (state) => state.initializeWorkspace,
+  );
+
+  useEffect(() => {
+    void initializeWorkspace();
+  }, [initializeWorkspace]);
+
   return (
     <ThemeProvider defaultTheme="dark" storageKey="theme">
       <TooltipProvider>
@@ -24,6 +36,7 @@ function App() {
             </aside>
           </div>
         </main>
+        <Toaster richColors position="top-center" />
       </TooltipProvider>
     </ThemeProvider>
   );

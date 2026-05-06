@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { toast } from "sonner";
 
 import { assemble, formatProgram, Parser, Tokenizer } from "@/core/assembler";
 import { isSimulatorError } from "@/core/errors";
@@ -20,6 +21,18 @@ import {
 import { BASE_ADDRESS } from "@/lib/simulator/constants";
 import { formatByte, formatWord, getErrorMessage } from "@/lib/simulator/format";
 import { samples } from "@/lib/simulator/samples";
+import {
+  bootstrapWorkspace,
+  createFileSystemNode,
+  deleteFileSystemNode,
+  moveFileSystemNodeToRoot,
+  renameFileSystemNode,
+  reorderFileSystemNode,
+  setActiveFileSystemFile,
+  updateFileSystemFileContent,
+  type FileSystemNode,
+  type WorkspaceSnapshot,
+} from "@/lib/storage/indexeddb-file-system";
 
 import type { SimulatorPanel } from "@/components/simulator/types";
 
@@ -31,11 +44,17 @@ const initialResult = relocateAssembledResult(assemble(initialSource));
 const initialMachine = createLoadedMachine(initialResult);
 const initialRows = buildAssembledRows(initialResult, initialSource);
 const initialAstState = parseAst(initialSource);
+const initialFileName = "main.asm";
+const autosaveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 export type OutputExplorerTab = "assembled" | "ast";
+export type WorkspaceSaveStatus = "idle" | "loading" | "saving" | "saved" | "error";
 
 type SimulatorState = {
   activeAddress: number;
+  activeFileHasLoadedProgram: boolean;
+  activeFileId: string | null;
+  activeFileName: string;
   activeLine?: number;
   assemblyError: AssemblyErrorDiagnostic | null;
   ast: ProgramNode | null;
@@ -45,7 +64,13 @@ type SimulatorState = {
   assembledSource: string;
   consoleOpen: boolean;
   executionFinished: boolean;
+  expandedFolderIds: string[];
+  fileExplorerCollapsed: boolean;
+  fileSystemNodes: FileSystemNode[];
   interrupts: InterruptSnapshot;
+  loadedFileId: string | null;
+  loadedFileName: string;
+  loadedSource: string;
   outputExplorerTab: OutputExplorerTab;
   lastOpcode: number | null;
   machine: Machine;
@@ -57,16 +82,29 @@ type SimulatorState = {
   rows: AssembledRow[];
   snapshot: MachineSnapshot;
   source: string;
+  workspaceInitialized: boolean;
+  workspaceError: string | null;
+  workspaceSaveStatus: WorkspaceSaveStatus;
   assembleProgram: (source?: string) => void;
+  createFile: (parentId?: string | null) => Promise<string | null>;
+  createFolder: (parentId?: string | null) => Promise<string | null>;
+  deleteNode: (id: string) => Promise<void>;
   formatSource: () => void;
+  initializeWorkspace: () => Promise<void>;
   loadSample: (source: string) => void;
+  moveNodeToRoot: (draggedId: string) => Promise<void>;
+  renameNode: (id: string, name: string) => Promise<void>;
+  reorderNode: (draggedId: string, targetId: string) => Promise<void>;
   resetProgram: () => void;
   runProgram: () => void;
+  selectFile: (id: string) => Promise<void>;
   setAstHoverSpan: (span: SourceSpan | null) => void;
   setActivePanel: (panel: SimulatorPanel) => void;
+  setFileExplorerCollapsed: (collapsed: boolean) => void;
   setOutputExplorerTab: (tab: OutputExplorerTab) => void;
   setSource: (source: string) => void;
   stepProgram: () => void;
+  toggleFolder: (id: string) => void;
   toggleConsole: () => void;
   updateFlag: (flag: FlagName, value: boolean) => void;
   updateInterruptRequest: (
@@ -84,8 +122,19 @@ export type AssemblyErrorDiagnostic = {
   span: SourceSpan;
 };
 
+type SimulatorSet = (
+  partial:
+    | Partial<SimulatorState>
+    | ((state: SimulatorState) => Partial<SimulatorState>),
+) => void;
+
+type SimulatorGet = () => SimulatorState;
+
 export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   activeAddress: BASE_ADDRESS,
+  activeFileHasLoadedProgram: false,
+  activeFileId: null,
+  activeFileName: initialFileName,
   activeLine: getActiveLine(initialRows, BASE_ADDRESS),
   assemblyError: null,
   ast: initialAstState.ast,
@@ -95,7 +144,13 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   assembledSource: initialSource,
   consoleOpen: false,
   executionFinished: initialMachine.controlUnit.isHalted(),
+  expandedFolderIds: [],
+  fileExplorerCollapsed: false,
+  fileSystemNodes: [],
   interrupts: initialMachine.interrupts.snapshot(),
+  loadedFileId: null,
+  loadedFileName: initialFileName,
+  loadedSource: initialSource,
   lastOpcode: null,
   machine: initialMachine,
   memory: initialMachine.memory.snapshot().data,
@@ -107,8 +162,12 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
   rows: initialRows,
   snapshot: initialMachine.snapshot(),
   source: initialSource,
+  workspaceInitialized: false,
+  workspaceError: null,
+  workspaceSaveStatus: "idle",
   assembleProgram: (nextSource) => {
     const source = nextSource ?? get().source;
+    const { activeFileId, activeFileName } = get();
 
     try {
       const nextResult = assemble(source);
@@ -120,6 +179,7 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
       set({
         activeAddress,
+        activeFileHasLoadedProgram: activeFileId !== null,
         activeLine: getActiveLine(rows, activeAddress),
         assemblyError: null,
         ast: nextAstState.ast,
@@ -127,9 +187,12 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         astHoverSpan: null,
         assembledSource: source,
         lastOpcode: null,
+        loadedFileId: activeFileId,
+        loadedFileName: activeFileName,
+        loadedSource: source,
         machine: nextMachine,
         ...snapshotSlices(nextMachine),
-        message: `Assembled ${nextResult.bytes.length} bytes.`,
+        message: `Assembled ${nextResult.bytes.length} bytes from ${activeFileName}.`,
         result: relocatedResult,
         rows,
       });
@@ -139,6 +202,75 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         assemblyError: getAssemblyErrorDiagnostic(error),
         consoleOpen: true,
         message: getErrorMessage(error),
+      });
+    }
+  },
+  createFile: async (parentId = null) => {
+    if (isExecutionInProgress(get())) {
+      setFileSwitchBlockedAlert(set, get());
+      return null;
+    }
+
+    try {
+      set({
+        workspaceError: null,
+        workspaceSaveStatus: "saving",
+      });
+      const snapshot = await createFileSystemNode({
+        kind: "file",
+        name: "untitled.asm",
+        parentId,
+      });
+
+      applyWorkspaceSnapshot(snapshot, set, get);
+      return snapshot.createdNode.id;
+    } catch (error) {
+      set({
+        workspaceError: getErrorMessage(error),
+        workspaceSaveStatus: "error",
+      });
+      return null;
+    }
+  },
+  createFolder: async (parentId = null) => {
+    try {
+      set({ workspaceError: null, workspaceSaveStatus: "saving" });
+      const snapshot = await createFileSystemNode({
+        kind: "folder",
+        name: "New Folder",
+        parentId,
+      });
+
+      applyWorkspaceSnapshot(snapshot, set, get, { selectActiveFile: false });
+      return snapshot.createdNode.id;
+    } catch (error) {
+      set({
+        workspaceError: getErrorMessage(error),
+        workspaceSaveStatus: "error",
+      });
+      return null;
+    }
+  },
+  deleteNode: async (id) => {
+    if (nodeContainsActiveFile(get().fileSystemNodes, id, get().activeFileId)) {
+      if (isExecutionInProgress(get())) {
+        setFileSwitchBlockedAlert(set, get());
+        return;
+      }
+    }
+
+    try {
+      set({
+        workspaceError: null,
+        workspaceSaveStatus: "saving",
+      });
+      const snapshot = await deleteFileSystemNode(id);
+
+      applyWorkspaceSnapshot(snapshot, set, get);
+    } catch (error) {
+      set({
+        workspaceError: getErrorMessage(error),
+        workspaceSaveStatus: "error",
       });
     }
   },
@@ -160,13 +292,36 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
         astHoverSpan: null,
         message: "Source formatted.",
         source: formattedSource,
+        workspaceSaveStatus: "saving",
       });
+      scheduleAutosave(get, set, formattedSource);
     } catch (error) {
       set({
         activePanel: "editor",
         assemblyError: getAssemblyErrorDiagnostic(error),
         consoleOpen: true,
         message: getErrorMessage(error),
+      });
+    }
+  },
+  initializeWorkspace: async () => {
+    if (get().workspaceInitialized || get().workspaceSaveStatus === "loading") {
+      return;
+    }
+
+    try {
+      set({ workspaceError: null, workspaceSaveStatus: "loading" });
+      const snapshot = await bootstrapWorkspace(initialSource);
+
+      applyWorkspaceSnapshot(snapshot, set, get, {
+        bindInitialLoadedFile: true,
+      });
+      set({ workspaceInitialized: true });
+    } catch (error) {
+      set({
+        message: "Could not load the local workspace.",
+        workspaceError: getErrorMessage(error),
+        workspaceSaveStatus: "error",
       });
     }
   },
@@ -180,25 +335,72 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       astError: nextAstState.error,
       astHoverSpan: null,
       consoleOpen: false,
-      message: "Sample loaded into editor.",
+      message: `Sample loaded into ${get().activeFileName}.`,
       source,
+      workspaceSaveStatus: "saving",
     });
+    scheduleAutosave(get, set, source);
+  },
+  moveNodeToRoot: async (draggedId) => {
+    try {
+      set({ workspaceError: null, workspaceSaveStatus: "saving" });
+      const snapshot = await moveFileSystemNodeToRoot(draggedId);
+
+      applyWorkspaceSnapshot(snapshot, set, get, { selectActiveFile: false });
+    } catch (error) {
+      set({
+        workspaceError: getErrorMessage(error),
+        workspaceSaveStatus: "error",
+      });
+    }
+  },
+  renameNode: async (id, name) => {
+    try {
+      set({ workspaceError: null, workspaceSaveStatus: "saving" });
+      const snapshot = await renameFileSystemNode(id, name);
+
+      applyWorkspaceSnapshot(snapshot, set, get, { selectActiveFile: false });
+    } catch (error) {
+      set({
+        workspaceError: getErrorMessage(error),
+        workspaceSaveStatus: "error",
+      });
+    }
+  },
+  reorderNode: async (draggedId, targetId) => {
+    try {
+      set({ workspaceError: null, workspaceSaveStatus: "saving" });
+      const snapshot = await reorderFileSystemNode(draggedId, targetId);
+
+      applyWorkspaceSnapshot(snapshot, set, get, { selectActiveFile: false });
+    } catch (error) {
+      set({
+        workspaceError: getErrorMessage(error),
+        workspaceSaveStatus: "error",
+      });
+    }
   },
   resetProgram: () => {
     const { result } = get();
     const nextMachine = createLoadedMachine(result);
     const activeAddress = result.entryPoint;
+    const activeFileHasLoadedProgram = get().activeFileId === get().loadedFileId;
 
     set({
       activeAddress,
-      activeLine: getActiveLine(get().rows, activeAddress),
+      activeFileHasLoadedProgram,
+      activeLine: activeFileHasLoadedProgram
+        ? getActiveLine(get().rows, activeAddress)
+        : undefined,
       lastOpcode: null,
       machine: nextMachine,
       ...snapshotSlices(nextMachine),
-      message: "Machine reset with the current bytes.",
+      message: `Machine reset with bytes from ${get().loadedFileName}.`,
     });
   },
   runProgram: () => {
+    if (!loadActiveSourceIntoMachine(set, get)) return;
+
     const { machine, result } = get();
 
     try {
@@ -224,7 +426,11 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
       set({
         activeAddress: lastAddress,
-        activeLine: getActiveLine(get().rows, lastAddress),
+        activeFileHasLoadedProgram: get().activeFileId === get().loadedFileId,
+        activeLine:
+          get().activeFileId === get().loadedFileId
+            ? getActiveLine(get().rows, lastAddress)
+            : undefined,
         lastOpcode: opcode,
         message:
           opcode === hltOpcode
@@ -240,10 +446,37 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       });
     }
   },
+  selectFile: async (id) => {
+    if (id !== get().activeFileId && isExecutionInProgress(get())) {
+      setFileSwitchBlockedAlert(set, get());
+      return;
+    }
+
+    try {
+      set({
+        workspaceError: null,
+        workspaceSaveStatus: "loading",
+      });
+      const snapshot = await setActiveFileSystemFile(id);
+
+      applyWorkspaceSnapshot(snapshot, set, get);
+    } catch (error) {
+      set({
+        workspaceError: getErrorMessage(error),
+        workspaceSaveStatus: "error",
+      });
+    }
+  },
   setAstHoverSpan: (astHoverSpan) =>
     set((state) => (state.astHoverSpan === astHoverSpan ? state : { astHoverSpan })),
   setActivePanel: (activePanel) =>
     set((state) => (state.activePanel === activePanel ? state : { activePanel })),
+  setFileExplorerCollapsed: (fileExplorerCollapsed) =>
+    set((state) =>
+      state.fileExplorerCollapsed === fileExplorerCollapsed
+        ? state
+        : { fileExplorerCollapsed },
+    ),
   setOutputExplorerTab: (outputExplorerTab) =>
     set((state) =>
       state.outputExplorerTab === outputExplorerTab
@@ -255,16 +488,22 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       if (state.source === source) return state;
 
       const nextAstState = parseAst(source);
+      scheduleAutosave(get, set, source);
 
       return {
         assemblyError: null,
         ast: nextAstState.ast,
         astError: nextAstState.error,
         astHoverSpan: null,
+        activeFileHasLoadedProgram: false,
+        activeLine: undefined,
         source,
+        workspaceSaveStatus: state.activeFileId ? "saving" : state.workspaceSaveStatus,
       };
     }),
   stepProgram: () => {
+    if (!loadActiveSourceIntoMachine(set, get)) return;
+
     const { machine } = get();
 
     try {
@@ -277,7 +516,11 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
       set({
         activeAddress: nextAddress,
-        activeLine: getActiveLine(get().rows, nextAddress),
+        activeFileHasLoadedProgram: get().activeFileId === get().loadedFileId,
+        activeLine:
+          get().activeFileId === get().loadedFileId
+            ? getActiveLine(get().rows, nextAddress)
+            : undefined,
         lastOpcode: opcode,
         message: `Stepped instruction ${formatByte(opcode)}.`,
         ...snapshotSlices(machine),
@@ -290,6 +533,12 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
       });
     }
   },
+  toggleFolder: (id) =>
+    set((state) => ({
+      expandedFolderIds: state.expandedFolderIds.includes(id)
+        ? state.expandedFolderIds.filter((folderId) => folderId !== id)
+        : [...state.expandedFolderIds, id],
+    })),
   toggleConsole: () => set((state) => ({ consoleOpen: !state.consoleOpen })),
   updateFlag: (flag, value) => {
     const { machine } = get();
@@ -375,7 +624,11 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
 
     set({
       activeAddress,
-      activeLine: getActiveLine(get().rows, activeAddress),
+      activeFileHasLoadedProgram: get().activeFileId === get().loadedFileId,
+      activeLine:
+        get().activeFileId === get().loadedFileId
+          ? getActiveLine(get().rows, activeAddress)
+          : undefined,
       message: `${register} set to ${
         register === "PC" || register === "SP"
           ? formatWord(value)
@@ -386,6 +639,246 @@ export const useSimulatorStore = create<SimulatorState>((set, get) => ({
     });
   },
 }));
+
+function applyWorkspaceSnapshot(
+  snapshot: WorkspaceSnapshot,
+  set: SimulatorSet,
+  get: SimulatorGet,
+  options: {
+    bindInitialLoadedFile?: boolean;
+    selectActiveFile?: boolean;
+  } = {},
+) {
+  const state = get();
+  const shouldSelectActiveFile = options.selectActiveFile !== false;
+  const nextActiveFileId = shouldSelectActiveFile
+    ? snapshot.activeFileId
+    : state.activeFileId;
+  const activeFile = findFileNode(snapshot.nodes, nextActiveFileId);
+  const expandedFolderIds = getExpandedFolderIdsForActiveFile(
+    snapshot.nodes,
+    activeFile,
+    state.expandedFolderIds,
+  );
+
+  if (!shouldSelectActiveFile) {
+    set({
+      activeFileName: activeFile?.name ?? state.activeFileName,
+      expandedFolderIds,
+      fileSystemNodes: snapshot.nodes,
+      workspaceError: null,
+      workspaceSaveStatus: "saved",
+    });
+    return;
+  }
+
+  const nextSource = activeFile?.content ?? "";
+  const nextAstState = parseAst(nextSource);
+  const loadedState = activeFile
+    ? getLoadedProgramState(nextSource, activeFile.id, activeFile.name)
+    : null;
+
+  set({
+    ...(loadedState?.state ?? {}),
+    activeFileId: activeFile?.id ?? null,
+    activeFileName: activeFile?.name ?? "No file",
+    assemblyError: loadedState?.error ?? null,
+    ast: nextAstState.ast,
+    astError: nextAstState.error,
+    astHoverSpan: null,
+    expandedFolderIds,
+    fileSystemNodes: snapshot.nodes,
+    message: activeFile
+      ? loadedState?.error
+        ? loadedState.error.message
+        : `Loaded ${activeFile.name}.`
+      : "Create a file to start editing.",
+    source: nextSource,
+    workspaceError: null,
+    workspaceSaveStatus: "saved",
+  });
+}
+
+function getLoadedProgramState(
+  source: string,
+  fileId: string | null,
+  fileName: string,
+) {
+  try {
+    const nextResult = assemble(source);
+    const relocatedResult = relocateAssembledResult(nextResult);
+    const nextMachine = createLoadedMachine(relocatedResult);
+    const rows = buildAssembledRows(relocatedResult, source);
+    const activeAddress = relocatedResult.entryPoint;
+
+    return {
+      error: null,
+      state: {
+        activeAddress,
+        activeFileHasLoadedProgram: fileId !== null,
+        activeLine: getActiveLine(rows, activeAddress),
+        assembledSource: source,
+        lastOpcode: null,
+        loadedFileId: fileId,
+        loadedFileName: fileName,
+        loadedSource: source,
+        machine: nextMachine,
+        ...snapshotSlices(nextMachine),
+        result: relocatedResult,
+        rows,
+      },
+    };
+  } catch (error) {
+    return {
+      error: getAssemblyErrorDiagnostic(error),
+      state: {
+        activeFileHasLoadedProgram: false,
+        activeLine: undefined,
+        lastOpcode: null,
+      },
+    };
+  }
+}
+
+function loadActiveSourceIntoMachine(set: SimulatorSet, get: SimulatorGet) {
+  const state = get();
+
+  if (
+    state.activeFileId === state.loadedFileId &&
+    state.source === state.loadedSource &&
+    state.activeFileHasLoadedProgram
+  ) {
+    return true;
+  }
+
+  const loadedState = getLoadedProgramState(
+    state.source,
+    state.activeFileId,
+    state.activeFileName,
+  );
+
+  if (loadedState.error) {
+    set({
+      activePanel: "editor",
+      assemblyError: loadedState.error,
+      consoleOpen: true,
+      message: loadedState.error.message,
+      ...loadedState.state,
+    });
+    return false;
+  }
+
+  set({
+    assemblyError: null,
+    astHoverSpan: null,
+    message: `Loaded ${state.activeFileName}.`,
+    ...loadedState.state,
+  });
+  return true;
+}
+
+function isExecutionInProgress(state: SimulatorState) {
+  return state.lastOpcode !== null && !state.executionFinished;
+}
+
+function setFileSwitchBlockedAlert(set: SimulatorSet, state: SimulatorState) {
+  const description = "Finish the program or reset the CPU before switching files.";
+
+  toast.warning(`${state.activeFileName} is mid-execution`, {
+    description,
+    id: "file-switch-blocked",
+  });
+
+  set({
+    message: "File switch blocked while the CPU is mid-execution.",
+  });
+}
+
+function nodeContainsActiveFile(
+  nodes: FileSystemNode[],
+  nodeId: string,
+  activeFileId: string | null,
+) {
+  if (!activeFileId) return false;
+  if (nodeId === activeFileId) return true;
+
+  let parentId = nodes.find((node) => node.id === activeFileId)?.parentId ?? null;
+
+  while (parentId) {
+    if (parentId === nodeId) return true;
+    parentId = nodes.find((node) => node.id === parentId)?.parentId ?? null;
+  }
+
+  return false;
+}
+
+function scheduleAutosave(
+  get: SimulatorGet,
+  set: SimulatorSet,
+  source: string,
+) {
+  const activeFileId = get().activeFileId;
+
+  if (!activeFileId) return;
+
+  const existingTimer = autosaveTimers.get(activeFileId);
+
+  if (existingTimer) {
+    clearTimeout(existingTimer);
+  }
+
+  const autosaveTimer = setTimeout(() => {
+    autosaveTimers.delete(activeFileId);
+
+    void updateFileSystemFileContent(activeFileId, source)
+      .then((updatedFile) => {
+        if (!updatedFile) return;
+
+        set((state) => ({
+          fileSystemNodes: state.fileSystemNodes.map((node) =>
+            node.id === updatedFile.id ? updatedFile : node,
+          ),
+          workspaceError: null,
+          workspaceSaveStatus: "saved",
+        }));
+      })
+      .catch((error: unknown) => {
+        set({
+          workspaceError: getErrorMessage(error),
+          workspaceSaveStatus: "error",
+        });
+      });
+  }, 450);
+
+  autosaveTimers.set(activeFileId, autosaveTimer);
+}
+
+function findFileNode(nodes: FileSystemNode[], id: string | null) {
+  return (
+    nodes.find(
+      (node): node is Extract<FileSystemNode, { kind: "file" }> =>
+        node.id === id && node.kind === "file",
+    ) ?? null
+  );
+}
+
+function getExpandedFolderIdsForActiveFile(
+  nodes: FileSystemNode[],
+  activeFile: FileSystemNode | null,
+  expandedFolderIds: string[],
+) {
+  if (!activeFile) return expandedFolderIds;
+
+  const expandedIds = new Set(expandedFolderIds);
+  let parentId = activeFile.parentId;
+
+  while (parentId) {
+    expandedIds.add(parentId);
+    parentId = nodes.find((node) => node.id === parentId)?.parentId ?? null;
+  }
+
+  return [...expandedIds];
+}
 
 function snapshotSlices(machine: Machine) {
   const snapshot = machine.snapshot();
